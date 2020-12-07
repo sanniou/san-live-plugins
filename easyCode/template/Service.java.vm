@@ -1,0 +1,40 @@
+##定义初始变量
+#set($className = $tool.append($fileClass.name, "Service"))
+$!setting.setFileName($tool.append($fileClass.name, "Service.java"))
+
+##拿到主键
+#foreach($column in $fileClass.allFields)
+    #if(!$column.name.equals("id"))
+        #set($pk = $column)
+    #end
+#end
+
+
+#set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
+package ${basePackage}.service;
+
+import $!{basePackage}.model.entity.$!{fileClass.name};
+import $!{basePackage}.dao.$!{fileClass.name}Dao;
+import $!{basePackage}.service.$!{fileClass.name}Service;
+import $!{basePackage}.model.message.request.*;
+import $!{basePackage}.model.message.response.*;
+import org.springframework.stereotype.Service;
+import com.onestep.pmms.model.message.BasePmmsRequest;
+import com.onestep.pmms.model.message.response.CountResponse;
+import com.onestep.pmms.model.message.response.SaveResponse;
+import javax.annotation.Resource;
+import java.util.List;
+
+public interface $!{className}{
+
+    CountResponse count$!{fileClass.name}(Count$!{fileClass.name}Request request);
+
+    $!{fileClass.name}Response query$!{fileClass.name}(Get$!{fileClass.name}Request request);
+
+    List<$!{fileClass.name}Response> query$!{fileClass.name}List($!{fileClass.name}ListPageRequest request);
+
+    SaveResponse save($!{fileClass.name}Request request);
+
+    void softDelete(Delete$!{fileClass.name}Request request);
+
+}

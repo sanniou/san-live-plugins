@@ -1,0 +1,68 @@
+##ServiceImpl
+##定义初始变量
+#set($className = $tool.append($fileClass.name, "ServiceImpl"))
+##设置回调
+
+$!setting.setFileName($tool.append($fileClass.name, "ServiceImpl.java"))
+
+##拿到主键
+#foreach($column in $fileClass.allFields)
+    #if(!$column.name.equals("id"))
+        #set($pk = $column)
+    #end
+#end
+
+
+#set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
+
+package ${basePackage}.service.impl;
+
+import $!{basePackage}.model.entity.$!{fileClass.name};
+import $!{basePackage}.dao.$!{fileClass.name}Dao;
+import $!{basePackage}.service.$!{fileClass.name}Service;
+import $!{basePackage}.model.message.request.*;
+import $!{basePackage}.model.message.response.*;
+import org.springframework.stereotype.Service;
+import com.onestep.pmms.model.message.BasePmmsRequest;
+import com.onestep.pmms.model.message.response.CountResponse;
+import com.onestep.pmms.model.message.response.SaveResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import javax.annotation.Resource;
+import java.util.List;
+
+@Service
+public class $!{className} implements $!{fileClass.name}Service{
+
+@Autowired
+private $!{fileClass.name}Dao $!tool.decapitalize($!{fileClass.name})Dao;
+
+@Override
+public CountResponse count$!{fileClass.name}(Count$!{fileClass.name}Request request){
+final long count= $!{tool.decapitalize($!{fileClass.name})}Dao.count();
+        return CountResponse.builder().count(count).build();
+        }
+
+@Override
+public $!{fileClass.name}Response query$!{fileClass.name}(Get$!{fileClass.name}Request request){
+        Optional<$!{fileClass.name}> optional=$!{tool.decapitalize($!{fileClass.name})}Dao.findById(request.getId());
+    $!{fileClass.name} data=VerifyUtils.solveOptional(optional,$!{fileClass.name}.class,"id",request.getId());
+        return $!{fileClass.name}Response.of(data);
+        }
+
+@Override
+public List<$!{fileClass.name}Response> query$!{fileClass.name}List($!{fileClass.name}ListPageRequest request){
+        List<$!{fileClass.name}> data=$!{tool.decapitalize($!{fileClass.name})}Dao.findAllById(request.getIdList());
+        return $!{fileClass.name}Response.of(data);
+        }
+
+@Override
+public SaveResponse save($!{fileClass.name}Request request){
+    $!{tool.decapitalize($!{fileClass.name})}Dao.save(request);
+        }
+
+@Override
+public void softDelete(Delete$!{fileClass.name}Request request){
+    $!{tool.decapitalize($!{fileClass.name})}Dao.softDelete(System.currentTimeMillis(),request.getUserId(),request.get$!{pk.name}List());
+        }
+
+        }

@@ -1,0 +1,40 @@
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}message.response;
+#foreach($column in $file.importList.allImportStatements)
+${column.text}
+#end
+import ${fileClass.qualifiedName};
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.beans.BeanUtils;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class $!{fileClass.name}Response {
+    #foreach($column in $fileClass.allFields)
+        #if(${column.docComment})/**
+         * ${column.docComment.text}
+         */
+        #end
+        #if(!${column.hasModifierProperty("static")})
+            @JsonProperty("$!{column.name}")
+            private $!{column.type.name} $!{column.name};
+        #end
+    #end
+
+    public static $!{fileClass.name}Response of($!{fileClass.name} data) {
+        final $!{fileClass.name}Response response = new $!{fileClass.name}Response();
+        #foreach($column in $fileClass.allFields)
+            #if(!${column.hasModifierProperty("static")})
+        response.set$!{tool.capitalize($column.name)}(data.get$!{tool.capitalize($column.name)}());
+            #end
+        #end
+        return response;
+    }
+}

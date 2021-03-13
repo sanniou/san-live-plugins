@@ -1,3 +1,3 @@
 # san-live-plugins
-for intellij
-custom plugin for [LivePlugins](https://github.com/dkandalov/live-plugin)
+For intellij:
+Custom plugin for [LivePlugins](https://github.com/dkandalov/live-plugin)

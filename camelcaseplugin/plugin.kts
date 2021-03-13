@@ -48,11 +48,13 @@ object Env {
 }
 
 //#######################################################################################################
+if (Env.startup || !isIdeStartup) {
+    Env.project = project
 
-registerAction(id = "cpm.san.code.ToggleCamelCase", keyStroke = "alt shift U", action = ToggleCamelCase())
+    registerAction(id = "cpm.san.code.ToggleCamelCase", keyStroke = "alt shift U", action = ToggleCamelCase())
 
-show("register camelcase success")
-
+    show("register camelcase success")
+}
 
 //#######################################################################################################
 

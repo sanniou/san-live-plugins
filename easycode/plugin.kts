@@ -47,6 +47,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextPane
 
+
 object Env {
     const val startup = false
     const val resetAction = false
@@ -69,31 +70,28 @@ object Env {
     }
 }
 
+
 if (Env.startup || !isIdeStartup) {
     Env.project = project
-    generateCode(FileUtil.loadFile("/template/ServiceImpl.java.vm"))
-//    generateCode()
-    show("register generateCode success")
+//    generateCode(FileUtil.loadFile("/JPA/Dao.java.vm"))
+    generateCode()
+//    show("run generateCode success")
 }
 
 
-fun generateCode(tempfile: File? = null) {
-    val instance: TreeFileChooserFactory = TreeFileChooserFactory
-            .getInstance(project)
-    val fileFilter: TreeFileChooser.PsiFileFilter = TreeFileChooser.PsiFileFilter { file ->
+fun generateCode(tempFile: File? = null) {
+    val instance = TreeFileChooserFactory.getInstance(project)
+    val fileFilter = TreeFileChooser.PsiFileFilter { file ->
         file.name.endsWith(".java")
     }
-    val javaFileChooser: TreeFileChooser = instance
-            .createFileChooser("java文件选择器", null,
-                    JavaFileType.INSTANCE, fileFilter)
+    val javaFileChooser = instance.createFileChooser("java文件选择器", null, JavaFileType.INSTANCE, fileFilter)
     javaFileChooser.showDialog()
     val selectedFile: PsiJavaFile = (javaFileChooser.selectedFile ?: return) as PsiJavaFile
-    val psiClass: PsiClass = PsiTreeUtil
-            .findChildOfAnyType(selectedFile.originalElement,
-                    PsiClass::class.java)!!
+    val psiClass = PsiTreeUtil.findChildOfAnyType(selectedFile.originalElement,
+            PsiClass::class.java)!!
 
-    if (tempfile != null) {
-        createFile(psiClass, selectedFile, tempfile)
+    if (tempFile != null) {
+        createFile(psiClass, selectedFile, tempFile)
     } else {
         showSelected(psiClass, selectedFile)
     }
@@ -102,34 +100,34 @@ fun generateCode(tempfile: File? = null) {
 
 fun showCode(project: Project, psiFile: PsiFile) {
 
-// 创建编辑框
+    // 创建编辑框
     val editorFactory: EditorFactory = EditorFactory.getInstance()
     val fileName = psiFile.name
-
+    psiFile.reformatCode()
     val document: Document = PsiDocumentManager.getInstance(project)
             .getDocument(psiFile)!!
+
     val editor: Editor = editorFactory
             .createEditor(document, project, psiFile.fileType, true)
-// 配置编辑框
+    // 配置编辑框
     val editorSettings: EditorSettings = editor.settings
-// 关闭虚拟空间
+    // 关闭虚拟空间
     editorSettings.isVirtualSpace = false
-// 关闭标记位置（断点位置）
+    // 关闭标记位置（断点位置）
     editorSettings.isLineMarkerAreaShown = false
-// 关闭缩减指南
+    // 关闭缩减指南
     editorSettings.isIndentGuidesShown = false
-// 显示行号
+    // 显示行号
     editorSettings.isLineNumbersShown = true
-// 支持代码折叠
+    // 支持代码折叠
     editorSettings.isFoldingOutlineShown = true
-// 附加行，附加列（提高视野）
+    // 附加行，附加列（提高视野）
     editorSettings.additionalColumnsCount = 3
     editorSettings.additionalLinesCount = 3
-// 不显示换行符号
+    // 不显示换行符号
     editorSettings.isCaretRowShown = false
     (editor as EditorEx).highlighter = EditorHighlighterFactory.getInstance()
             .createEditorHighlighter(project, LightVirtualFile(fileName))
-// 构建dialog
     val dialogBuilder = DialogBuilder(project)
     dialogBuilder.setTitle(fileName)
     val component: JComponent = editor.getComponent()
@@ -137,7 +135,6 @@ fun showCode(project: Project, psiFile: PsiFile) {
     dialogBuilder.setCenterPanel(component)
     dialogBuilder.addCloseButton()
     dialogBuilder.addDisposable {
-//释放掉编辑框
         editorFactory.releaseEditor(editor)
         dialogBuilder.dispose()
     }
@@ -207,7 +204,7 @@ object FileUtil {
         return ""
     }
 
-    fun listFile(): List<String>? {
+    fun listFile(): List<String> {
         return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
                 .listFiles()
                 ?.filter { it.isDirectory }
@@ -256,13 +253,11 @@ object NameUtils {
     }
 
     fun getJavaName(name: String): String {
-        var name = name
         if (name.isEmpty()) {
             return name
         }
-        // 强转全小写
-        name = name.toLowerCase()
-        val matcher = TO_HUMP_PATTERN.matcher(name.toLowerCase())
+        val localName = name.toLowerCase()
+        val matcher = TO_HUMP_PATTERN.matcher(localName.toLowerCase())
         val buffer = StringBuffer()
         while (matcher.find()) {
             matcher.appendReplacement(buffer, matcher.group(1).toUpperCase())
@@ -320,8 +315,8 @@ fun findDirectory(selectedFile: PsiFile, psiFile: PsiJavaFile): PsiDirectory {
 }
 
 fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
-// 创建一行四列的主面板
-//val mainPanel = JPanel(GridLayout(1, 4))
+    // 创建一行四列的主面板
+    //val mainPanel = JPanel(GridLayout(1, 4))
     val mainPanel = JPanel(FlowLayout())
 
     val listPanel = FileUtil.listDirectory()
@@ -332,7 +327,7 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
                 templatePanel
             }
 
-// 构建dialog
+    // 构建dialog
     val dialogBuilder = DialogBuilder(project)
     dialogBuilder.setTitle("MsgValue.TITLE_INFO")
     dialogBuilder.setNorthPanel(MultiLineLabel("请选择要导出的code："))
@@ -352,7 +347,7 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
                 selectedFiles.forEach {
                     createFile(psiClass, selectedFile, it)
                 }
-// 关闭并退出
+                // 关闭并退出
                 dialogWrapper.close(DialogWrapper.OK_EXIT_CODE)
 
             }
@@ -423,7 +418,7 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
 }
 
 fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
-// 获取默认参数
+    // 获取默认参数
     val param: MutableMap<String, Any> = getDefaultParam()
 
     param["fileClass"] = psiClass.apply {
@@ -444,8 +439,8 @@ fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
             .createFileFromText(templateSetting.fileName,
                     psiClass.language, code) as PsiJavaFile
 
-//    addOrReplaceFile(selectedFile, psiFile)
-    showCode(project!!, psiFile)
+    addOrReplaceFile(selectedFile, psiFile)
+//    showCode(project!!, psiFile)
 }
 
 data class TemplateSetting(var fileName: String = "")

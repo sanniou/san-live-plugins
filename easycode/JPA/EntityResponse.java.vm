@@ -1,6 +1,6 @@
 package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}message.response;
 #foreach($column in $file.importList.allImportStatements)
-${column.text}
+    ${column.text}
 #end
 import ${fileClass.qualifiedName};
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -32,7 +32,8 @@ public class $!{fileClass.name}Response {
         final $!{fileClass.name}Response response = new $!{fileClass.name}Response();
         #foreach($column in $fileClass.allFields)
             #if(!${column.hasModifierProperty("static")})
-        response.set$!{tool.capitalize($column.name)}(data.get$!{tool.capitalize($column.name)}());
+                response.set$!{tool.capitalize($column.name)}(
+                        data.get$!{tool.capitalize($column.name)}());
             #end
         #end
         return response;

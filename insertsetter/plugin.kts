@@ -7,18 +7,20 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
+import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import liveplugin.PluginUtil
 import liveplugin.runWriteAction
 import liveplugin.show
 import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
+import org.jetbrains.kotlin.j2k.getContainingClass
 import org.jetbrains.kotlin.j2k.getContainingMethod
 import java.text.DateFormat
 import java.util.*
 
 object Env {
     const val startup = true
-    const val resetAction = false
+    val resetAction get() = debugMode
     const val debugMode = false
     var consoleView: ConsoleView? = null
     var project: Project? = null
@@ -41,23 +43,28 @@ object Env {
 if (Env.startup || !isIdeStartup) {
     Env.project = project
 
+    val actionsClasses =
+            arrayOf(GenerateSetAction::class.java,
+                    GenerateBuilderAction::class.java,
+                    GenerateSetWithDefaultAction::class.java,
+                    GenerateReturnSetAction::class.java,
+                    GenerateReturnBuilderAction::class.java)
+
     IntentionManager.getInstance().apply {
         intentionActions.forEach {
             Env.println("intentionActions${it.javaClass}")
-            if (it.javaClass.toString().contains("GenerateSetAction")
-                    || it.javaClass.toString().contains("GenerateReturnSetAction")
-                    || it.javaClass.toString().contains("GenerateReturnBuilderAction")
-            ) {
+            actionsClasses.find { clazz ->
+                it.javaClass.name == clazz.name
+            }?.run {
                 Env.println("unregisterIntention${it.javaClass}")
                 unregisterIntention(it)
             }
         }
-        Env.println("add GenerateSetAction")
-        addAction(GenerateSetAction())
-        Env.println("add GenerateReturnSetAction")
-        addAction(GenerateReturnSetAction())
-        Env.println("add GenerateReturnBuilderAction")
-        addAction(GenerateReturnBuilderAction())
+
+        actionsClasses.forEach {
+            Env.println("add action ${it.simpleName}")
+            addAction(it.newInstance())
+        }
     }
     show("register GenerateSetAction success")
 }
@@ -69,7 +76,7 @@ class GenerateReturnSetAction : BaseGenerateSetAction() {
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
         return psiElement.getContainingMethod().run {
-            Env.println("isAvailable@${this?.returnType?.presentableText?.toLowerCase()}")
+            Env.println("$this +  isAvailable ${this?.returnType?.presentableText?.toLowerCase()}")
             this?.returnType?.presentableText?.toLowerCase()?.equals("void")?.not() ?: false
         }
     }
@@ -92,14 +99,123 @@ class GenerateReturnSetAction : BaseGenerateSetAction() {
 
 }
 
-class GenerateReturnBuilderAction : BaseGenerateSetAction() {
-    override fun getText() = "GenerateReturnBuilder"
+open class GenerateSetAction : BaseGenerateSetAction() {
+    override fun getText() = "GenerateAllSet"
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
-        return psiElement.getContainingMethod().run {
-            Env.println("isAvailable@${this?.returnType?.presentableText?.toLowerCase()}")
-            this?.returnType?.presentableText?.toLowerCase()?.equals("void")?.not() ?: false
+        Env.println("$this + isAvailable:${psiElement.context}")
+        return when (psiElement.context) {
+            is PsiVariable -> {
+                true
+            }
+            is PsiReferenceExpression -> {
+                true
+            }
+            else -> {
+                false
+            }
         }
+    }
+
+
+    override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
+        Env.println("invoke")
+        editor ?: return
+        val psiType = when (val context = psiElement.context) {
+            is PsiVariable -> {
+                context.type
+            }
+            is PsiReferenceExpression -> {
+                context.type!!
+            }
+            else -> {
+                show("error with offsetElement $psiElement context $context")
+                return
+            }
+        }
+
+        insertSetter(psiType, editor, project, psiElement)
+    }
+}
+
+open class GenerateBuilderAction : BaseGenerateSetAction() {
+    override fun getText() = "GenerateAllBuilder"
+
+    override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+        val context = psiElement.context
+        Env.println("$this+isAvailable:$context")
+        return when (context) {
+            is PsiReferenceExpression -> {
+                context.text.endsWith("builder")
+            }
+            else -> {
+                false
+            }
+        }
+    }
+
+
+    override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
+        Env.println("$this+invoke")
+        editor ?: return
+        val psiType = when (val context = psiElement.context) {
+            is PsiReferenceExpression -> {
+                PsiTypesUtil.getClassType(PsiTypesUtil.getPsiClass(context.type)!!.containingClass!!)
+            }
+            else -> {
+                show("error with offsetElement $psiElement context $context")
+                return
+            }
+        }
+
+        insertSetter(psiType, editor, project, psiElement)
+    }
+
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod) = "\n.${method.name.substring(3).decapitalize()}(null)"
+}
+
+class GenerateSetWithDefaultAction : GenerateSetAction() {
+    override fun getText() = "GenerateAllSetWithDefault"
+
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod): String {
+        val parameterName = method.parameters[0].name!!
+        val parameterType = (method.parameters[0].type as PsiClassReferenceType).className
+
+        val provider = DefaultTemplate.typeValueProvider.getOrElse(parameterType) { null }
+
+
+
+        provider?.forEach { (t, u) ->
+            if (parameterName.contains(t)) {
+                return "\n$elementName.${method.name}(${u()});"
+            }
+        }
+
+        return "\n$elementName.${method.name}(null);"
+
+    }
+}
+
+class GenerateReturnBuilderAction : BaseGenerateSetAction() {
+
+
+    override fun getText() = "GenerateReturnBuilder"
+
+    override fun isAvailable(project: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+
+        return psiElement.getContainingMethod()
+                ?.returnType
+                ?.let { type ->
+
+                    Env.println("$this + isAvailable ${type.presentableText.toLowerCase()}")
+                    (type.presentableText.toLowerCase() == "void").not()
+                            .and(PsiTypesUtil.getPsiClass(type)
+                                    ?.children
+                                    ?.filterIsInstance<PsiModifierList>()
+                                    ?.flatMap { it.annotations.toList() }
+                                    ?.firstOrNull { it.qualifiedName == "lombok.Builder" }
+                                    != null)
+                } ?: false
     }
 
     override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
@@ -144,48 +260,6 @@ class GenerateReturnBuilderAction : BaseGenerateSetAction() {
     }
 }
 
-class GenerateSetAction : BaseGenerateSetAction() {
-    override fun getText() = "GenerateAllSet"
-
-    override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
-        Env.println("isAvailable:${psiElement.context}")
-        return when (psiElement.context) {
-            is PsiVariable -> {
-                true
-            }
-            is PsiReferenceExpression -> {
-                true
-            }
-            else -> {
-                false
-            }
-        }
-    }
-
-
-    override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
-        Env.println("invoke")
-        editor ?: return
-        val context = psiElement.context
-        val psiType: PsiType
-        when (context) {
-            is PsiVariable -> {
-                psiType = context.type
-            }
-            is PsiReferenceExpression -> {
-                psiType = context.type!!
-            }
-            else -> {
-                show("error with offsetElement $psiElement context $context")
-                return
-            }
-        }
-
-        insertSetter(psiType, editor, project, psiElement)
-    }
-}
-
-
 abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
 
     fun PsiFile.reformatCode() {
@@ -202,11 +276,6 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
         } catch (e: Exception) {
             show(e.toString())
         }
-    }
-
-    override fun checkFile(file: PsiFile?): Boolean {
-        //Env.println("checkFile${super.checkFile(file)}")
-        return super.checkFile(file)
     }
 
     override fun getFamilyName(): String {
@@ -254,5 +323,26 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
 
     protected open fun getSetterMethodStr(elementName: String, method: PsiMethod) =
             "\n$elementName.${method.name}();"
+
+}
+
+
+
+typealias ValueProvider = () -> String
+
+object DefaultTemplate {
+
+    val typeValueProvider = mapOf<String, Map<String, ValueProvider>>(
+            "String" to mapOf("Id" to { "\"${UUID.randomUUID()}\"" },
+                    "Name" to { "\"UserName\"" },
+                    "Code" to { "\"KLSCODE001\"" },
+                    "Phone" to { "\"13901010203\"" }
+            ),
+            "Long" to mapOf("time" to { "${System.currentTimeMillis()}L" },
+                    "Time" to { "${System.currentTimeMillis()}L" },
+                    "date" to { "${System.currentTimeMillis()}L" },
+                    "Date" to { "${System.currentTimeMillis()}L" })
+
+    )
 
 }

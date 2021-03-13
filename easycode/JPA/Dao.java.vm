@@ -1,0 +1,27 @@
+$!setting.setFileName($tool.append($fileClass.name, "Dao.java"))
+
+##拿到主键
+#foreach($column in $fileClass.allFields)
+    #if(!$column.name.equals("id"))
+        #set($pk = $column)
+    #end
+#end
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("model")})}dao;
+
+import ${fileClass.qualifiedName};
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+
+@Repository
+public interface $!{fileClass.name}Dao extends JpaRepository<$!fileClass.name,$!pk.type.name> {
+
+    @Modifying
+    @Query("update $!fileClass.name t set t.deleteAt = ?1, t.deleteBy= ?2 where t.id in(?3)")
+    void softDelete(Long timestamp, String userId, List<$!pk.type.name> idList);
+
+}

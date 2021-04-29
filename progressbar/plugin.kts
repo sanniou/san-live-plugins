@@ -104,7 +104,7 @@ class NyanProgressBarUi : BasicProgressBarUI() {
         // diff 1
         g2d.fill(RoundRectangle2D.Float(2f * off, 2f * off, if (full) w.toFloat() else amountFull - JBUI.scale(5f), h - JBUI.scale(5f), JBUI.scale(7f), JBUI.scale(7f)))
         // diff 2
-        icon.paintIcon(progressBar, g2d, (if (full) startOffset else amountFull) - JBUI.scale(10), -JBUI.scale(6))
+        icon.paintIcon(progressBar, g2d, (if (full) startOffset else amountFull) - JBUI.scale(10), -JBUI.scale(7))
 
         g2d.translate(0, -(c.height - h) / 2)
         // Deal with possible text painting
@@ -150,7 +150,7 @@ object FileUtil {
 
 object NyanIcons {
 
-    const val imageSize = 45
+    const val imageSize = 36
 
     val CAT_ICON: Icon by lazy {
         val loadFile = FileUtil.loadFile("/resources/cat.png")

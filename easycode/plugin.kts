@@ -1,15 +1,20 @@
 import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.actionSystem.Constraints
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.ide.fileTemplates.impl.UrlUtil
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.util.PackageUtil
+import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.util.TreeFileChooser
 import com.intellij.ide.util.TreeFileChooserFactory
+import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import  com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.editor.EditorSettings
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory
 import com.intellij.openapi.project.Project
@@ -31,7 +36,6 @@ import org.apache.velocity.VelocityContext
 import org.apache.velocity.app.VelocityEngine
 import org.apache.velocity.runtime.RuntimeConstants
 import org.jetbrains.annotations.NotNull
-import org.jetbrains.kotlin.idea.util.module
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
@@ -47,7 +51,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextPane
 
-
+// depends-on-plugin com.intellij.java
 object Env {
     const val startup = false
     const val resetAction = false
@@ -73,27 +77,64 @@ object Env {
 
 if (Env.startup || !isIdeStartup) {
     Env.project = project
-//    generateCode(FileUtil.loadFile("/JPA/Dao.java.vm"))
-    generateCode()
-//    show("run generateCode success")
+
+    val actionGroupId = "GenerateGroup"
+    val actionId = "com.saniou.easy.code.action.EasyCodeAction"
+    val anchorActionId = "com.saniou.easy.code.action.JavaActionGroup"
+
+    val actionManager: ActionManager = ActionManager.getInstance()
+
+    val actionGroup = actionManager.getAction(actionGroupId) as com.intellij.openapi.actionSystem.DefaultActionGroup
+
+    val alreadyRegistered = (actionManager.getAction(actionId) != null)
+    if (alreadyRegistered) {
+        Env.println("remove $actionId")
+        actionGroup.remove(actionManager.getAction(actionId))
+        actionManager.unregisterAction(actionId)
+    }
+
+    val action = EasyCodeAction()
+    actionManager.registerAction(actionId, action)
+    actionGroup.addAction(action, Constraints(com.intellij.openapi.actionSystem.Anchor.BEFORE, anchorActionId))
+    action.templatePresentation.setText("EasyCodeAction", true)
+    show("register java action group success")
+}
+
+class EasyCodeAction : AnAction("EasyCodeAction") {
+
+
+    override fun actionPerformed(event: AnActionEvent) {
+        val psiFile = event.getData(LangDataKeys.PSI_FILE)
+        if (psiFile is PsiJavaFile) {
+            generateCode(null, psiFile);
+        }
+    }
+
 }
 
 
-fun generateCode(tempFile: File? = null) {
+fun selectFile(): PsiJavaFile? {
     val instance = TreeFileChooserFactory.getInstance(project)
     val fileFilter = TreeFileChooser.PsiFileFilter { file ->
         file.name.endsWith(".java")
     }
     val javaFileChooser = instance.createFileChooser("java文件选择器", null, JavaFileType.INSTANCE, fileFilter)
     javaFileChooser.showDialog()
-    val selectedFile: PsiJavaFile = (javaFileChooser.selectedFile ?: return) as PsiJavaFile
-    val psiClass = PsiTreeUtil.findChildOfAnyType(selectedFile.originalElement,
+    return (javaFileChooser.selectedFile ?: return null) as PsiJavaFile
+}
+
+fun generateCode(tempFile: File? = null, currentFile: PsiJavaFile? = null) {
+
+    val actuallyFile = currentFile ?: selectFile()
+    actuallyFile ?: return
+
+    val psiClass = PsiTreeUtil.findChildOfAnyType(actuallyFile.originalElement,
             PsiClass::class.java)!!
 
     if (tempFile != null) {
-        createFile(psiClass, selectedFile, tempFile)
+        createFile(psiClass, actuallyFile, tempFile)
     } else {
-        showSelected(psiClass, selectedFile)
+        showSelected(psiClass, actuallyFile)
     }
 }
 
@@ -311,7 +352,7 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
 }
 
 fun findDirectory(selectedFile: PsiFile, psiFile: PsiJavaFile): PsiDirectory {
-    return PackageUtil.findOrCreateDirectoryForPackage(selectedFile.module!!, psiFile.packageName, null, true)!!
+    return PackageUtil.findOrCreateDirectoryForPackage(selectedFile.project, psiFile.packageName, null, true)!!
 }
 
 fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
@@ -379,6 +420,7 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
      */
     init {
         val textPane = JTextPane()
+        textPane.isEditable = false
         textPane.text = title
         add(textPane)
         checkBoxList = if (items.isNotEmpty()) {

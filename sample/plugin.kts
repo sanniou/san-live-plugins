@@ -42,17 +42,6 @@ object Env {
 
 throw RuntimeException("stop this")
 
-ToolWindowManager.getInstance(project!!)
-        .registerToolWindow(RegisterToolWindowTask(id = "sample", anchor = ToolWindowAnchor.RIGHT, contentFactory = AF()))
-
-class AF : ToolWindowFactory, DumbAware {
-    override fun createToolWindowContent(p0: Project, p1: ToolWindow) {
-
-
-    }
-
-}
-
 show("Current project: ${project?.name}")
 ProgressManager.getInstance().run(object : Task.Backgroundable(project, "show progress") {
     override fun run(progressIndicator: ProgressIndicator) {

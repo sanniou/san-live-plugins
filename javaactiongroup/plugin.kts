@@ -1,28 +1,26 @@
 import com.intellij.execution.ui.ConsoleView
+import kotlin.reflect.KClass
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.command.WriteCommandAction.Simple
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.refactoring.suggested.startOffset
+import com.jetbrains.rd.util.string.printToString
 import liveplugin.PluginUtil
 import liveplugin.currentEditor
-import liveplugin.runWriteAction
 import liveplugin.show
-import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import java.text.DateFormat
 import java.util.*
-import com.intellij.openapi.editor.Document
-import com.intellij.psi.*
-import com.jetbrains.rd.util.string.printToString
-import java.lang.RuntimeException
-import java.math.BigInteger
+import kotlin.reflect.full.createInstance
+import kotlin.reflect.full.primaryConstructor
 
-
+// depends-on-plugin com.intellij.java
 object Env {
 
     const val startup = true
@@ -114,16 +112,19 @@ class JavaActionGroup : ActionGroup() {
         return getMenuList()
     }
 
-    fun checkAction(clazz: Class<out AnAction>): AnAction {
+    fun checkAction(clazz: KClass<out AnAction>): AnAction {
         val configActionIdPrefix = "com.saniou.easy.code.action"
-        val actionId = configActionIdPrefix + clazz.name
+        val actionId = configActionIdPrefix + clazz.simpleName
         val actionManager: ActionManager = ActionManager.getInstance()
         val configAction: AnAction? = actionManager.getAction(actionId)
 
         fun registerAction(): AnAction {
             try {
-
-                val newAction = clazz.newInstance() as AnAction
+                clazz.constructors.forEach {
+                    Env.println(it.parameters.joinToString { "a" + it.type })
+                }
+                val newAction = clazz.java.getDeclaredConstructor(Plugin::class.java).newInstance(null) as AnAction
+                //val newAction2 = clazz.createInstance()
                 actionManager.registerAction(actionId, newAction)
                 return newAction
             } catch (e: Exception) {
@@ -150,10 +151,10 @@ class JavaActionGroup : ActionGroup() {
             return arrayOfAnActions
         }
         arrayOfAnActions = arrayOf(
-                checkAction(AddJsonPropertyAction::class.java),
-                checkAction(FormatBlankLineAction::class.java),
-                checkAction(CopyParentProfileAction::class.java),
-                checkAction(FoldRightProfileAction::class.java)
+                checkAction(AddJsonPropertyAction::class),
+                checkAction(FormatBlankLineAction::class),
+                checkAction(CopyParentProfileAction::class),
+                checkAction(FoldRightProfileAction::class)
         )
         return arrayOfAnActions
     }
@@ -177,7 +178,8 @@ class FoldRightProfileAction : AnAction("FoldRightProfile") {
         if (psiFile !is PsiJavaFile) {
             return
         }
-        editor.document.runWriteAction(project, description = "Insert JsonProperty") {
+
+        WriteCommandAction.runWriteCommandAction(project) {
             Env.println("psiFile : $psiFile")
             psiFile.classes.forEach { psiClass ->
                 Env.println("psiClass : $psiClass")
@@ -196,17 +198,6 @@ class FoldRightProfileAction : AnAction("FoldRightProfile") {
         }
 
     }
-
-
-    fun PsiFile.reformatCode() {
-        try {
-            CodeStyleManager.getInstance(project).reformat(this)
-            JavaCodeStyleManager.getInstance(project).optimizeImports(this)
-        } catch (e: Exception) {
-            show(e.toString())
-        }
-    }
-
 }
 
 //#######################################################################################################
@@ -220,46 +211,40 @@ class CopyParentProfileAction : AnAction("CopyParentProfile") {
         if (psiFile !is PsiJavaFile) {
             return
         }
-        editor.document.runWriteAction(project, description = "Insert JsonProperty") {
+        WriteCommandAction.runWriteCommandAction(project) {
             Env.println("psiFile : $psiFile")
             psiFile.classes.forEach { psiClass ->
                 Env.println("psiClass : $psiClass")
 
+                val fields = psiClass.fields
                 psiClass.allFields.toMutableList()
-                        .apply { removeAll(psiClass.fields) }
+                        .apply {
+                            removeAll { pField ->
+                                fields.find { it.name == pField.name } != null
+                            }
+                        }
                         .filter { !it.hasModifierProperty("static") }
                         .forEach { field ->
                             Env.println("field : $field")
-                            psiClass.add(field)
+                            val fieldz = psiClass.add(field) as PsiField
+
+                            try {
+                                fieldz.annotations.forEach {
+                                    it.delete()
+                                }
+                            } catch (e: Exception) {
+                                Env.println(e)
+                            }
                         }
-            }
-            editor.document.text
-                    .replace(" = null;", ";")
-                    .let {
-                        return@let if (it.contains(" implements ")) {
-                            Env.println("replace until implements ")
-                            it.replace(Regex("extends[\\.A-Z a-z\\s]+ implements"), " implements")
-                        } else {
-                            Env.println("replace until \"{\" ")
-                            it.replace(Regex("extends[\\.A-Z a-z\\s]+ \\{"), " {")
-                        }
-                    }.let {
-                        editor.document.setText(it)
+
+                psiClass.extendsListTypes.forEach { parent ->
+                    parent.psiContext?.also {
+                        it.delete()
                     }
-        }
-        WCA({
-            psiFile.reformatCode()
-        }, project, psiFile)
 
-    }
-
-
-    fun PsiFile.reformatCode() {
-        try {
-            CodeStyleManager.getInstance(project).reformat(this)
-            JavaCodeStyleManager.getInstance(project).optimizeImports(this)
-        } catch (e: Exception) {
-            show(e.toString())
+                }
+                psiFile.reformatCode()
+            }
         }
     }
 
@@ -276,11 +261,10 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
             return
         }
 
-        editor.document.runWriteAction(project, description = "Insert JsonProperty") {
-
+        WriteCommandAction.runWriteCommandAction(project) {
             var offset = Wrapper(0);
             psiFile.classes.forEach { psiClass ->
-                handleClass(it, offset, psiClass)
+                handleClass(editor.document, offset, psiClass)
             }
 
             psiFile.reformatCode()
@@ -310,19 +294,12 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
         }
     }
 
-    fun PsiFile.reformatCode() {
-        try {
-            CodeStyleManager.getInstance(project).reformat(this)
-            JavaCodeStyleManager.getInstance(project).optimizeImports(this)
-        } catch (e: Exception) {
-            show(e.toString())
-        }
-    }
 
 }
 
 //#######################################################################################################
 class AddJsonPropertyAction : AnAction("AddJsonProperty") {
+
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project!!
@@ -332,11 +309,11 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
             return
         }
 
-        editor.document.runWriteAction(project, description = "Insert JsonProperty") {
+        WriteCommandAction.runWriteCommandAction(project) {
 
             val offset = Wrapper(0)
             psiFile.classes.forEach { psiClass ->
-                handleClass(it, offset, psiClass)
+                handleClass(editor.document, offset, psiClass)
             }
 
             val jsonPropertyClass = JavaPsiFacade.getInstance(project).findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
@@ -377,15 +354,25 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
         document.insertString(field.startOffset + offset.get(), "@JsonProperty(\"${field.name}\")\n".apply { offset.set(offset.get() + length) })
     }
 
-    fun PsiFile.reformatCode() {
-        try {
-            CodeStyleManager.getInstance(project).reformat(this)
-            JavaCodeStyleManager.getInstance(project).optimizeImports(this)
-        } catch (e: Exception) {
-            show(e.toString())
-        }
-    }
+}
 
+fun PsiFile.commitAndUnblockDocument(): Boolean {
+    val virtualFile = this.virtualFile ?: return false
+    val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+            ?: return false
+    val documentManager = PsiDocumentManager.getInstance(project)
+    documentManager.doPostponedOperationsAndUnblockDocument(document)
+    documentManager.commitDocument(document)
+    return true
+}
+
+fun PsiFile.reformatCode() {
+    try {
+        CodeStyleManager.getInstance(project).reformat(this)
+        JavaCodeStyleManager.getInstance(project).optimizeImports(this)
+    } catch (e: Exception) {
+        show(e.toString())
+    }
 }
 
 class Wrapper<T>(var obj: T) {
@@ -397,18 +384,3 @@ class Wrapper<T>(var obj: T) {
     }
 
 }
-
-class WCA(val runc: () -> Unit, project: Project, vararg files: PsiFile) : Simple<Any>(project, *files) {
-    override fun run() {
-        runc()
-    }
-
-}
-
-//// 编辑文件需要开启线程
-//WriteCommandAction.Simple(psiMethod.getProject(), psiMethod.getContainingFile()) {
-//    @Override
-//    protected void run() throws Throwable {
-
-//    }
-//}.execute();

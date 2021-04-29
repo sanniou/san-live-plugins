@@ -1,4 +1,5 @@
 import com.intellij.codeInsight.intention.IntentionManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
@@ -7,17 +8,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.util.PsiTypesUtil
-import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
-import com.jetbrains.rd.util.getThrowableText
 import liveplugin.PluginUtil
-import liveplugin.runWriteAction
 import liveplugin.show
-import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
-import org.jetbrains.kotlin.j2k.getContainingClass
 import java.text.DateFormat
 import java.util.*
 
+// depends-on-plugin com.intellij.java
 object Env {
     const val startup = true
     const val resetAction = false
@@ -56,6 +53,17 @@ if (Env.startup || !isIdeStartup) {
 }
 
 class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
+    fun PsiElement.getContainingClass(): PsiClass? {
+        var context = context
+        while (context != null) {
+            val _context = context
+            if (_context is PsiClass) return _context
+            if (_context is PsiMember) return _context.containingClass
+            context = _context.context
+        }
+        return null
+    }
+
     override fun getText(): String {
         return "InsertServiceMethod"
     }
@@ -100,43 +108,85 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
                                 Env.println("methods$method")
                                 psiClass.methods.firstOrNull { psiMethod -> psiMethod.name == method.name }
                                         ?: run {
-                                            Env.println("insertMethod:$method")
+                                            Env.println("insertMethod=$method")
                                             contentLength += insertMethod(psiElement, method, serviceField.name, editor, project)
                                         }
                             }
                 }
         // fixme not work
         try {
-            editor.document.runWriteAction(project, description = "insertMethodFormat", callback = {
+            WriteCommandAction.runWriteCommandAction(project) {
                 val psiFile = psiElement.containingFile
                 psiFile.commitAndUnblockDocument()
                 psiFile.reformatCodeRange(psiElement.startOffset, psiElement.startOffset + contentLength)
-            })
+            }
         } catch (e: Exception) {
             Env.println("Exception$e")
         }
     }
+
 
     fun insertMethod(psiElement: PsiElement, method: PsiMethod, serviceName: String, editor: Editor, project: Project): Int {
         if (method.parameters.isEmpty()) {
             Env.println("not insert empty paramters method:$method")
             return 0
         }
+        val returnType = method.returnType
+        val requestType = method.parameters[0].type
+
+        Env.println("insertMethod: returnType=$returnType ;requestType=$requestType")
+
+        val psiFile = psiElement.containingFile as PsiJavaFile
+        psiFile.commitAndUnblockDocument()
+        if (requestType is PsiType) {
+            try {
+                PsiTypesUtil.getPsiClass(requestType)?.let {
+                    Env.println("importClass $it")
+                    psiFile.importClass(it)
+                }
+            } catch (e: Exception) {
+                Env.println("Exception importClass $e")
+
+            }
+        }
+        if (returnType is PsiType) {
+            try {
+                PsiTypesUtil.getPsiClass(returnType)?.let {
+                    Env.println("importClass $it")
+                    psiFile.importClass(it)
+                }
+            } catch (e: Exception) {
+                Env.println("Exception importClass $e")
+
+            }
+        }
+
         var contentLength: Int
-        val presentableText = method.returnType?.presentableText
-        val (returnType, tryMethodName) = if (presentableText == "void") Pair("Void", "tryConsumer") else Pair(presentableText, "tryFunction")
+        val presentableText = returnType?.presentableText
+        val (returnName, tryMethodName) = if (presentableText == "void") Pair("Void", "tryConsumer") else Pair(presentableText, "tryFunction")
+        Env.println("insert content ")
         val methodContent = """
     @PostMapping("/${method.name}")
     @ApiOperation(value = "${method.name}")
-    public PmmsResponse<$returnType> ${method.name}(
-            @RequestBody @Validated ${(method.parameters[0].type as PsiType).presentableText} request) {
+    public PmmsResponse<$returnName> ${method.name}(
+            @RequestBody @Validated ${(requestType as PsiType).presentableText} request) {
         return ${tryMethodName}(request, () -> $serviceName.${method.name}(request));
     }
     """.trimIndent().apply { contentLength = this.length }
-        editor.document.runWriteAction(project, description = "insertMethod", callback = {
+        WriteCommandAction.runWriteCommandAction(project) {
             editor.document.insertString(psiElement.startOffset, methodContent)
-        })
+        }
         return contentLength
     }
 
+}
+
+fun PsiFile.commitAndUnblockDocument(): Boolean {
+    val virtualFile = this.virtualFile ?: return false
+    val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+            ?: return false
+    val documentManager = PsiDocumentManager.getInstance(project)
+    documentManager.doPostponedOperationsAndUnblockDocument(document)
+    documentManager.commitDocument(document)
+    return true
 }

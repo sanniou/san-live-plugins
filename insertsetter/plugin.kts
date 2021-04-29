@@ -1,23 +1,22 @@
+import Plugin.ValueProvider
 import com.intellij.codeInsight.intention.IntentionManager
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import liveplugin.PluginUtil
-import liveplugin.runWriteAction
 import liveplugin.show
-import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
-import org.jetbrains.kotlin.j2k.getContainingClass
-import org.jetbrains.kotlin.j2k.getContainingMethod
 import java.text.DateFormat
 import java.util.*
 
+// depends-on-plugin com.intellij.java
 object Env {
     const val startup = true
     val resetAction get() = debugMode
@@ -69,9 +68,9 @@ if (Env.startup || !isIdeStartup) {
     show("register GenerateSetAction success")
 }
 
-
 //#######################################################################################################
 class GenerateReturnSetAction : BaseGenerateSetAction() {
+
     override fun getText() = "GenerateReturnWithSet"
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
@@ -262,22 +261,6 @@ class GenerateReturnBuilderAction : BaseGenerateSetAction() {
 
 abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
 
-    fun PsiFile.reformatCode() {
-        try {
-            CodeStyleManager.getInstance(project).reformat(this)
-        } catch (e: Exception) {
-            show(e.toString())
-        }
-    }
-
-    fun PsiFile.reformatCodeRange(rangeStart: Int, rangeEnd: Int) {
-        try {
-            CodeStyleManager.getInstance(project).reformatRange(this, rangeStart, rangeEnd)
-        } catch (e: Exception) {
-            show(e.toString())
-        }
-    }
-
     override fun getFamilyName(): String {
         return "GenerateSetFamily"
     }
@@ -289,7 +272,7 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
         val psiFile = psiElement.containingFile
 
         PsiTypesUtil.getPsiClass(psiType)?.let { offsetClassElement ->
-            editor.document.runWriteAction(project, description = "Insert All Set", callback = {
+            WriteCommandAction.runWriteCommandAction(project) {
                 Env.println("$parameterName")
                 val currentLine = editor.caretModel.logicalPosition.line
                 val lineEndOffset = editor.document.getLineEndOffset(currentLine)
@@ -309,9 +292,10 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
 
                 psiFile.commitAndUnblockDocument()
                 psiFile.reformatCodeRange(lineEndOffset, fold + afterCode.length)
-            })
+            }
         }
     }
+
 
     protected open fun beforeSetter(parameterName: String, offset: Int, editor: Editor, psiType: PsiType): String {
         return ""
@@ -324,8 +308,44 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
     protected open fun getSetterMethodStr(elementName: String, method: PsiMethod) =
             "\n$elementName.${method.name}();"
 
-}
 
+    fun PsiFile.reformatCode() {
+        try {
+            CodeStyleManager.getInstance(project).reformat(this)
+        } catch (e: Exception) {
+            show(e.toString())
+        }
+    }
+
+    fun PsiFile.reformatCodeRange(rangeStart: Int, rangeEnd: Int) {
+        try {
+            CodeStyleManager.getInstance(project).reformatRange(this, rangeStart, rangeEnd)
+        } catch (e: Exception) {
+            show(e.toString())
+        }
+    }
+
+    fun PsiFile.commitAndUnblockDocument(): Boolean {
+        val virtualFile = this.virtualFile ?: return false
+        val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+                ?: return false
+        val documentManager = PsiDocumentManager.getInstance(project)
+        documentManager.doPostponedOperationsAndUnblockDocument(document)
+        documentManager.commitDocument(document)
+        return true
+    }
+
+    fun PsiElement.getContainingMethod(): PsiMethod? {
+        var context = context
+        while (context != null) {
+            val _context = context
+            if (_context is PsiMethod) return _context
+            context = _context.context
+        }
+        return null
+    }
+
+}
 
 
 typealias ValueProvider = () -> String

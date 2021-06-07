@@ -1,20 +1,16 @@
 import com.intellij.execution.ui.ConsoleView
-import com.intellij.openapi.actionSystem.Constraints
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.ide.fileTemplates.impl.UrlUtil
-import com.intellij.ide.util.PackageUtil
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.ide.util.PackageUtil
 import com.intellij.ide.util.TreeFileChooser
 import com.intellij.ide.util.TreeFileChooserFactory
-import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
-import  com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.editor.EditorSettings
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.highlighter.EditorHighlighterFactory
 import com.intellij.openapi.project.Project
@@ -77,14 +73,14 @@ object Env {
 
 if (Env.startup || !isIdeStartup) {
     Env.project = project
-
     val actionGroupId = "GenerateGroup"
     val actionId = "com.saniou.easy.code.action.EasyCodeAction"
     val anchorActionId = "com.saniou.easy.code.action.JavaActionGroup"
 
+    
     val actionManager: ActionManager = ActionManager.getInstance()
 
-    val actionGroup = actionManager.getAction(actionGroupId) as com.intellij.openapi.actionSystem.DefaultActionGroup
+    val actionGroup = actionManager.getAction(actionGroupId) as DefaultActionGroup
 
     val alreadyRegistered = (actionManager.getAction(actionId) != null)
     if (alreadyRegistered) {
@@ -95,7 +91,7 @@ if (Env.startup || !isIdeStartup) {
 
     val action = EasyCodeAction()
     actionManager.registerAction(actionId, action)
-    actionGroup.addAction(action, Constraints(com.intellij.openapi.actionSystem.Anchor.BEFORE, anchorActionId))
+    actionGroup.addAction(action, Constraints.FIRST)
     action.templatePresentation.setText("EasyCodeAction", true)
     show("register java action group success")
 }

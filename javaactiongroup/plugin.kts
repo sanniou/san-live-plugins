@@ -54,6 +54,7 @@ if (Env.startup || !isIdeStartup) {
 
     val actionGroupId = "GenerateGroup"
     val actionId = "com.saniou.easy.code.action.JavaActionGroup"
+    val anchorActionId = "com.saniou.easy.code.action.EasyCodeAction"
     val displayText = "JavaActionGroup"
 
     val actionManager: ActionManager = ActionManager.getInstance()
@@ -68,7 +69,7 @@ if (Env.startup || !isIdeStartup) {
 
     val action = JavaActionGroup()
     actionManager.registerAction(actionId, action)
-    actionGroup.addAction(action, Constraints.FIRST)
+    actionGroup.addAction(action, Constraints(Anchor.AFTER, anchorActionId))
     action.templatePresentation.setText(displayText, true)
     show("register java action group success")
 }

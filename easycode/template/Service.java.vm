@@ -29,11 +29,13 @@ public interface $!{className}{
 
     CountResponse count$!{fileClass.name}(Count$!{fileClass.name}Request request);
 
-    $!{fileClass.name}Response query$!{fileClass.name}(Get$!{fileClass.name}Request request);
+    $!{fileClass.name}Response search$!{fileClass.name}(Get$!{fileClass.name}Request request);
 
-    List<$!{fileClass.name}Response> query$!{fileClass.name}List($!{fileClass.name}ListPageRequest request);
+    List<$!{fileClass.name}Response> search$!{fileClass.name}List($!{fileClass.name}ListRequest request);
 
-    SaveResponse save($!{fileClass.name}Request request);
+    List<String> search$!{fileClass.name}IdList($!{fileClass.name}ListRequest request);
+
+    SaveListResponse save$!{fileClass.name}List($!{fileClass.name}Request request);
 
     void softDelete(Delete$!{fileClass.name}Request request);
 

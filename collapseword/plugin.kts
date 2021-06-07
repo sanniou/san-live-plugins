@@ -14,9 +14,13 @@ import java.util.regex.Pattern
 registerAction("symbolizeKeyWords", "ctrl alt shift 0", object : AnAction() {
     override fun actionPerformed(event: AnActionEvent) {
         val editor = currentEditorIn(event.project!!)!!
+        collapseIn(editor, "(\\.stream()\n?\\s+)\\s") { "" }
         collapseIn(editor, "(@Override\n?\\s+)\\s") { "↑" }
         collapseIn(editor, "(public\n?\\s*?)\\s") { "●" }
+        collapseIn(editor, "(void\n?\\s*?)\\s") { "" }
         collapseIn(editor, "(private\n?\\s*?)\\s") { "○" }
+        collapseIn(editor, "(StringUtils.isEmpty)") { "isEmpty" }
+        collapseIn(editor, "(CollectionUtils.isEmpty)") { "isEmpty" }
         collapseIn(editor, "(protected\n?\\s*?)\\s") { "□" }
         collapseIn(editor, "(static\n?\\s*?)\\s") { "◆" }
         collapseIn(editor, "(final\n?\\s*?)\\s") { "ƒ" }

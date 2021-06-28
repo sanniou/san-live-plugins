@@ -49,7 +49,7 @@ import javax.swing.JTextPane
 
 // depends-on-plugin com.intellij.java
 object Env {
-    const val startup = false
+    const val startup = true
     const val resetAction = false
     const val debugMode = false
     var consoleView: ConsoleView? = null
@@ -75,9 +75,7 @@ if (Env.startup || !isIdeStartup) {
     Env.project = project
     val actionGroupId = "GenerateGroup"
     val actionId = "com.saniou.easy.code.action.EasyCodeAction"
-    val anchorActionId = "com.saniou.easy.code.action.JavaActionGroup"
 
-    
     val actionManager: ActionManager = ActionManager.getInstance()
 
     val actionGroup = actionManager.getAction(actionGroupId) as DefaultActionGroup

@@ -1,18 +1,21 @@
 import com.intellij.codeInsight.intention.IntentionManager
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTypesUtil
+import com.intellij.psi.util.PsiUtil
 import com.intellij.refactoring.suggested.startOffset
 import liveplugin.PluginUtil
 import liveplugin.show
 import java.text.DateFormat
 import java.util.*
+
 
 // depends-on-plugin com.intellij.java
 object Env {
@@ -76,11 +79,6 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         }
     }
 
-    override fun checkFile(file: PsiFile?): Boolean {
-        //Env.println("checkFile${super.checkFile(file)}")
-        return super.checkFile(file)
-    }
-
     override fun getFamilyName(): String {
         return "InsertControllerMethodActionFamily"
     }
@@ -125,6 +123,15 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         }
     }
 
+    /**
+     * Resolves generics on the given type and returns them (if any) or null if there are none
+     */
+    fun getResolvedGenerics(type: PsiType): Collection<PsiType> {
+        if (type is PsiClassType) {
+            return type.resolveGenerics().substitutor.substitutionMap.values
+        }
+        return emptyList()
+    }
 
     fun insertMethod(psiElement: PsiElement, method: PsiMethod, serviceName: String, editor: Editor, project: Project): Int {
         if (method.parameters.isEmpty()) {
@@ -137,6 +144,11 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         Env.println("insertMethod: returnType=$returnType ;requestType=$requestType")
 
         val psiFile = psiElement.containingFile as PsiJavaFile
+        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("com.onestep.pmms.model.message.PmmsResponse", GlobalSearchScope.allScope(project))!!)
+        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.web.bind.annotation.PostMapping", GlobalSearchScope.allScope(project))!!)
+        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.validation.annotation.Validated", GlobalSearchScope.allScope(project))!!)
+        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.web.bind.annotation.RequestBody", GlobalSearchScope.allScope(project))!!)
+        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("io.swagger.annotations.ApiOperation", GlobalSearchScope.allScope(project))!!)
         psiFile.commitAndUnblockDocument()
         if (requestType is PsiType) {
             try {
@@ -151,9 +163,12 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         }
         if (returnType is PsiType) {
             try {
-                PsiTypesUtil.getPsiClass(returnType)?.let {
-                    Env.println("importClass $it")
-                    psiFile.importClass(it)
+                PsiTypesUtil.getPsiClass(returnType)?.let { psiClass ->
+                    Env.println("importClass $psiClass")
+                    psiFile.importClass(psiClass)
+                }
+                getResolvedGenerics(returnType).forEach {
+                    psiFile.importClass(PsiTypesUtil.getPsiClass(it)!!)
                 }
             } catch (e: Exception) {
                 Env.println("Exception importClass $e")

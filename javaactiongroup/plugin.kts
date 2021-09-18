@@ -1,5 +1,4 @@
 import com.intellij.execution.ui.ConsoleView
-import kotlin.reflect.KClass
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.command.WriteCommandAction
@@ -17,8 +16,7 @@ import liveplugin.currentEditor
 import liveplugin.show
 import java.text.DateFormat
 import java.util.*
-import kotlin.reflect.full.createInstance
-import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.KClass
 
 // depends-on-plugin com.intellij.java
 
@@ -102,12 +100,13 @@ class JavaActionGroup : ActionGroup() {
 
         val dumbService = DumbService.getInstance(project)
         if (dumbService.isDumb) {
-            dumbService.showDumbModeNotification("plugin is not available during indexing")
+            dumbService.showDumbModeNotification("Plugin is not available during indexing")
             return getEmptyAnAction()
         }
 
         val psiFile = event.getData(LangDataKeys.PSI_FILE)
         if (psiFile !is PsiJavaFile) {
+            show("error ! psiFile = $psiFile")
             return getEmptyAnAction()
         }
 
@@ -122,16 +121,15 @@ class JavaActionGroup : ActionGroup() {
 
         fun registerAction(): AnAction {
             try {
-                clazz.constructors.forEach {
-                    Env.println(it.parameters.joinToString { "a" + it.type })
+                clazz.constructors.forEach { kFunction ->
+                    Env.println(kFunction.parameters.joinToString { "a" + it.type })
                 }
                 val newAction = clazz.java.getDeclaredConstructor(Plugin::class.java).newInstance(null) as AnAction
-                //val newAction2 = clazz.createInstance()
                 actionManager.registerAction(actionId, newAction)
                 return newAction
             } catch (e: Exception) {
                 Env.println(e.printToString())
-                throw RuntimeException("")
+                throw RuntimeException(e.message, e)
             }
         }
         if (Env.resetAction) {
@@ -264,7 +262,7 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
         }
 
         WriteCommandAction.runWriteCommandAction(project) {
-            var offset = Wrapper(0);
+            val offset = Wrapper(0);
             psiFile.classes.forEach { psiClass ->
                 handleClass(editor.document, offset, psiClass)
             }

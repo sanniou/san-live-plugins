@@ -44,6 +44,7 @@ if (Env.startup || !isIdeStartup) {
 
     val actionsClasses =
             arrayOf(GenerateSetAction::class.java,
+                    GenerateSetWithParamAction::class.java,
                     GenerateBuilderAction::class.java,
                     GenerateSetWithDefaultAction::class.java,
                     GenerateReturnSetAction::class.java,
@@ -97,6 +98,7 @@ class GenerateReturnSetAction : BaseGenerateSetAction() {
     }
 
 }
+
 
 open class GenerateSetAction : BaseGenerateSetAction() {
     override fun getText() = "GenerateAllSet"
@@ -191,6 +193,37 @@ class GenerateSetWithDefaultAction : GenerateSetAction() {
         }
 
         return "\n$elementName.${method.name}(null);"
+
+    }
+}
+
+class GenerateSetWithParamAction : GenerateSetAction() {
+
+    private var currentParameters = emptyArray<PsiParameter>()
+
+    private val methodMap = mutableMapOf<String, String>()
+    override fun getText() = "GenerateSetWithParam"
+
+    override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+        methodMap.clear()
+        val psiMethod = psiElement.getContainingMethod()
+        currentParameters = psiMethod?.parameterList?.parameters ?: emptyArray()
+        currentParameters.forEach { parameter ->
+            PsiTypesUtil.getPsiClass(parameter.type)!!.allMethods
+                    .filter { it.name.startsWith("get") }
+                    .forEach {
+                        methodMap[it.name.substring(3)] = parameter.name
+                    }
+        }
+        return currentParameters.isNotEmpty() && super.isAvailable(project1, editor, psiElement)
+    }
+
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod): String {
+        val fieldName = method.name.substring(3)
+        if (methodMap.contains(fieldName)) {
+            return "\n$elementName.set${fieldName}(${methodMap[fieldName]}.get${fieldName}());"
+        }
+        return "\n$elementName.set${fieldName}(null);"
 
     }
 }

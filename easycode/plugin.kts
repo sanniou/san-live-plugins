@@ -233,7 +233,7 @@ object FileUtil {
         try {
             return UrlUtil.loadText(file.toUrl()).replace("\r", "")
         } catch (e: Exception) {
-            Env.println("IOException$e")
+            Env.println("loadFile IOException : $e")
 
         }
         return ""
@@ -328,6 +328,7 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
     WriteCommandAction.runWriteCommandAction(project) {
         try {
             val psiDirectory = findDirectory(selectedFile, psiFile)
+            Env.println("psiDirectory $psiDirectory ")
             psiDirectory.apply {
                 findFile(psiFile.name)?.run {
                     PsiDocumentManager.getInstance(project).getDocument(this)?.run {
@@ -340,7 +341,7 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
                 }
             }
         } catch (e: Exception) {
-            Env.println(e)
+            Env.println("addOrReplaceFile : " + e)
         }
     }
 }
@@ -459,7 +460,7 @@ fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
 
     param["fileClass"] = psiClass.apply {
         psiClass.allFields.forEach {
-            Env.println("$it ${it.javaClass} ${it.hasModifierProperty("static")} ")
+            Env.println("createFile $it ; javaClass: ${it.javaClass} ; static : ${it.hasModifierProperty("static")} ")
         }
     }
     param["file"] = selectedFile

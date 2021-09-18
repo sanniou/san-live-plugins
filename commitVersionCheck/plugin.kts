@@ -1,5 +1,4 @@
 import com.intellij.execution.ui.ConsoleView
-import java.time.LocalDateTime
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.lang.xml.XMLLanguage
 import com.intellij.openapi.command.WriteCommandAction
@@ -21,6 +20,7 @@ import com.intellij.vcs.commit.ChangesViewCommitPanel
 import liveplugin.PluginUtil
 import liveplugin.show
 import java.text.DateFormat
+import java.time.LocalDateTime
 import java.util.*
 
 object Env {
@@ -67,6 +67,9 @@ if (Env.startup || !isIdeStartup) {
 class VersionCheckHandler(val checkinProjectPanel: CheckinProjectPanel) : CheckinHandler() {
 
     override fun beforeCheckin(): ReturnResult {
+        if (!((project?.name ?: "").contains("pmms"))) {
+            return ReturnResult.COMMIT
+        }
         show("before check in")
         val updateApi = (checkinProjectPanel.component as ChangesViewCommitPanel).changesView
                 .changes
@@ -78,7 +81,6 @@ class VersionCheckHandler(val checkinProjectPanel: CheckinProjectPanel) : Checki
         Env.println("controller changed = $updateApi")
         val result = updateVersion(updateApi, checkinProjectPanel.project)
         show("before check in result = $result")
-
 
 
 //

@@ -75,6 +75,7 @@ class GenerateReturnSetAction : BaseGenerateSetAction() {
     override fun getText() = "GenerateReturnWithSet"
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+        Env.println("$this + isAvailable:${psiElement.context}")
         return psiElement.getContainingMethod().run {
             Env.println("$this +  isAvailable ${this?.returnType?.presentableText?.toLowerCase()}")
             this?.returnType?.presentableText?.toLowerCase()?.equals("void")?.not() ?: false
@@ -205,6 +206,10 @@ class GenerateSetWithParamAction : GenerateSetAction() {
     override fun getText() = "GenerateSetWithParam"
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+        if (!super.isAvailable(project1, editor, psiElement)) {
+            return false;
+        }
+        Env.println("$this + isAvailable:${psiElement.context}")
         methodMap.clear()
         val psiMethod = psiElement.getContainingMethod()
         currentParameters = psiMethod?.parameterList?.parameters ?: emptyArray()
@@ -234,7 +239,7 @@ class GenerateReturnBuilderAction : BaseGenerateSetAction() {
     override fun getText() = "GenerateReturnBuilder"
 
     override fun isAvailable(project: Project, editor: Editor?, psiElement: PsiElement): Boolean {
-
+        Env.println("$this + isAvailable:${psiElement.context}")
         return psiElement.getContainingMethod()
                 ?.returnType
                 ?.let { type ->

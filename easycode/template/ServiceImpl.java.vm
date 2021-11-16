@@ -36,7 +36,7 @@ public class $!{className} implements $!{fileClass.name}Service{
 @Autowired
 private $!{fileClass.name}Dao $!tool.decapitalize($!{fileClass.name})Dao;
 
-@Autowired
+@@PersistenceContext
 private EntityManagement entityManagement;
 
 @Override
@@ -46,16 +46,16 @@ final long count= $!{tool.decapitalize($!{fileClass.name})}Dao.count();
         }
 
 @Override
-public $!{fileClass.name}Response search$!{fileClass.name}(Get$!{fileClass.name}Request request){
+public $!{fileClass.name} search$!{fileClass.name}(Get$!{fileClass.name}Request request){
         Optional<$!{fileClass.name}> optional=$!{tool.decapitalize($!{fileClass.name})}Dao.findById(request.getId());
     $!{fileClass.name} data=VerifyUtils.solveOptional(optional,$!{fileClass.name}.class,"id",request.getId());
-        return $!{fileClass.name}Response.of(data);
+        return data;
         }
 
 @Override
-public List<$!{fileClass.name}Response> query$!{fileClass.name}List($!{fileClass.name}ListPageRequest request){
+public List<$!{fileClass.name}> query$!{fileClass.name}List($!{fileClass.name}ListPageRequest request){
         List<$!{fileClass.name}> data=$!{tool.decapitalize($!{fileClass.name})}Dao.findAllById(request.getIdList());
-        return $!{fileClass.name}Response.of(data);
+        return data;
         }
 
 @Override

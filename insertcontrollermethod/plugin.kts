@@ -20,7 +20,7 @@ import java.util.*
 // depends-on-plugin com.intellij.java
 object Env {
     const val startup = true
-    const val resetAction = false
+    val resetAction get() = debugMode
     const val debugMode = false
     var consoleView: ConsoleView? = null
     var project: Project? = null

@@ -36,6 +36,8 @@ registerAction("symbolizeKeyWords", "ctrl alt shift 0", object : AnAction() {
 
 })
 
+liveplugin.show("register symbolizeKeyWords success")
+
 if (!isIdeStartup) show("Loaded symbolizeKeywords action. Use Ctrl+Alt+Shift+0 to run it.")
 
 

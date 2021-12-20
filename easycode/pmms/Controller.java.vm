@@ -1,0 +1,67 @@
+##定义初始变量
+#set($className = $tool.append($fileClass.name, "Controller"))
+$!setting.setFileName($tool.append($fileClass.name, "Controller.java"))
+
+##拿到主键
+#foreach($column in $fileClass.allFields)
+    #if(!$column.name.equals("id"))
+        #set($pk = $column)
+    #end
+#end
+
+
+#set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
+package ${basePackage}.controller;
+
+
+import $!{basePackage}.model.request.DeleteDataRequest;
+import $!{basePackage}.model.entity.$!{fileClass.name};
+import $!{basePackage}.service.$!{fileClass.name}Service;
+import $!{basePackage}.model.request.Fetch$!{fileClass.name}ListRequest;
+import $!{basePackage}.model.request.Save$!{fileClass.name}ListRequest;
+import $!{basePackage}.model.response.SaveResponse;
+import $!{basePackage}.model.response.SaveAllResponse;
+import $!{basePackage}.model.response.TotalResponse;
+import com.onestep.pmms.controller.PMMSController;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+import com.onestep.pmms.model.message.PmmsResponse;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/information")
+@Api(value = "mass production data service")
+public class $!{className} implements PMMSController {
+
+
+    @Autowired
+    private $!{fileClass.name}Service $!tool.decapitalize($!{fileClass.name})Service;
+
+
+    @PostMapping("/save$!{fileClass.name}List")
+    @ApiOperation(value = "save$!{fileClass.name}List")
+    public PmmsResponse<SaveAllResponse> save$!{fileClass.name}List(
+            @RequestBody @Validated Save$!{fileClass.name}ListRequest request) {
+        return tryFunction(request, () -> $!{tool.decapitalize($!{fileClass.name})}Service.save$!{fileClass.name}List(request));
+    }
+
+    @PostMapping("/fetch$!{fileClass.name}List")
+    @ApiOperation(value = "fetch$!{fileClass.name}List")
+    public PmmsResponse<TotalResponse<$!{fileClass.name}>> fetch$!{fileClass.name}List(
+            @RequestBody @Validated Fetch$!{fileClass.name}ListRequest request) {
+        return tryFunction(request, () -> $!{tool.decapitalize($!{fileClass.name})}Service.fetch$!{fileClass.name}List(request));
+    }
+
+    @PostMapping("/delete$!{fileClass.name}")
+    @ApiOperation(value = "delete$!{fileClass.name}")
+    public PmmsResponse<Void> delete$!{fileClass.name}(
+            @RequestBody @Validated DeleteDataRequest request) {
+        return tryConsumer(request, () -> $!{tool.decapitalize($!{fileClass.name})}Service.delete$!{fileClass.name}(request));
+    }
+}

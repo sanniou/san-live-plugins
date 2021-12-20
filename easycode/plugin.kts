@@ -31,7 +31,6 @@ import liveplugin.toUrl
 import org.apache.velocity.VelocityContext
 import org.apache.velocity.app.VelocityEngine
 import org.apache.velocity.runtime.RuntimeConstants
-import org.jetbrains.annotations.NotNull
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
@@ -47,10 +46,11 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextPane
 
+
 // depends-on-plugin com.intellij.java
 object Env {
     const val startup = true
-    const val resetAction = false
+    const val resetAction = true
     const val debugMode = false
     var consoleView: ConsoleView? = null
     var project: Project? = null
@@ -66,7 +66,10 @@ object Env {
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str\n", ConsoleViewContentType.LOG_INFO_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
+            ConsoleViewContentType.LOG_INFO_OUTPUT
+        )
     }
 }
 
@@ -90,8 +93,8 @@ if (Env.startup || !isIdeStartup) {
     val action = EasyCodeAction()
     actionManager.registerAction(actionId, action)
     actionGroup.addAction(action, Constraints.FIRST)
-    action.templatePresentation.setText("EasyCodeAction", true)
-    show("register java action group success")
+    action.templatePresentation.setText("EasyCodeAction", false)
+    show("register EasyCodeAction success")
 }
 
 class EasyCodeAction : AnAction("EasyCodeAction") {
@@ -99,6 +102,20 @@ class EasyCodeAction : AnAction("EasyCodeAction") {
 
     override fun actionPerformed(event: AnActionEvent) {
         val psiFile = event.getData(LangDataKeys.PSI_FILE)
+        Env.println(event.getData(LangDataKeys.PSI_ELEMENT) ?: "PSI_ELEMENT")
+        Env.println(event.getData(LangDataKeys.SYMBOLS) ?: "PSI_ELEMENT")
+        Env.println(event.getData(LangDataKeys.NAVIGATABLE) ?: "NAVIGATABLE")
+        Env.println(event.getData(LangDataKeys.LANGUAGE) ?: "LANGUAGE")
+        Env.println(event.getData(LangDataKeys.HOST_EDITOR) ?: "HOST_EDITOR")
+        Env.println(event.getData(LangDataKeys.CARET) ?: "CARET")
+        Env.println(event.getData(LangDataKeys.CARET)!!.selectedText ?: "dssssss")
+        Env.println(event.getData(LangDataKeys.EDITOR) ?: "CARET")
+
+        val element = PsiManager.getInstance(event.project!!)
+            .findFile(event.getData(LangDataKeys.VIRTUAL_FILE)!!)!!
+            .findElementAt(event.getData(LangDataKeys.CARET)!!.offset)
+        Env.println("cursor test =$element")
+
         if (psiFile is PsiJavaFile) {
             generateCode(null, psiFile);
         }
@@ -118,17 +135,26 @@ fun selectFile(): PsiJavaFile? {
 }
 
 fun generateCode(tempFile: File? = null, currentFile: PsiJavaFile? = null) {
-
+    Env.println("generateCode start")
     val actuallyFile = currentFile ?: selectFile()
     actuallyFile ?: return
 
-    val psiClass = PsiTreeUtil.findChildOfAnyType(actuallyFile.originalElement,
-            PsiClass::class.java)!!
+    Env.println("generateCode actuallyFile $actuallyFile")
+    val psiClass = PsiTreeUtil.findChildOfAnyType(
+        actuallyFile.originalElement,
+        PsiClass::class.java
+    )!!
 
-    if (tempFile != null) {
-        createFile(psiClass, actuallyFile, tempFile)
-    } else {
-        showSelected(psiClass, actuallyFile)
+    Env.println("generateCode psiClass $psiClass")
+    try {
+
+        if (tempFile != null) {
+            createFile(psiClass, actuallyFile, tempFile)
+        } else {
+            showSelected(psiClass, actuallyFile)
+        }
+    } catch (e: Exception) {
+        show("generateCode Exception $e")
     }
 }
 
@@ -140,10 +166,10 @@ fun showCode(project: Project, psiFile: PsiFile) {
     val fileName = psiFile.name
     psiFile.reformatCode()
     val document: Document = PsiDocumentManager.getInstance(project)
-            .getDocument(psiFile)!!
+        .getDocument(psiFile)!!
 
     val editor: Editor = editorFactory
-            .createEditor(document, project, psiFile.fileType, true)
+        .createEditor(document, project, psiFile.fileType, true)
     // 配置编辑框
     val editorSettings: EditorSettings = editor.settings
     // 关闭虚拟空间
@@ -162,7 +188,7 @@ fun showCode(project: Project, psiFile: PsiFile) {
     // 不显示换行符号
     editorSettings.isCaretRowShown = false
     (editor as EditorEx).highlighter = EditorHighlighterFactory.getInstance()
-            .createEditorHighlighter(project, LightVirtualFile(fileName))
+        .createEditorHighlighter(project, LightVirtualFile(fileName))
     val dialogBuilder = DialogBuilder(project)
     dialogBuilder.setTitle(fileName)
     val component: JComponent = editor.getComponent()
@@ -200,11 +226,13 @@ object VelocityUtils {
         try {
             // 生成代码
             velocityEngine
-                    .evaluate(velocityContext, stringWriter, "Velocity Code Generate", template)
+                .evaluate(velocityContext, stringWriter, "Velocity Code Generate", template)
         } catch (e: Exception) {
             // 将异常全部捕获，直接返回，用于写入模板
             val builder = StringBuilder("在生成代码时，模板发生了如下语法错误：\n")
             val writer = StringWriter()
+            show("Exception$builder\n${e.stackTraceToString()}")
+            Env.println("Exception$builder\n${e.stackTraceToString()}")
             e.printStackTrace(PrintWriter(writer))
             builder.append(writer.toString())
             return builder.toString().replace("\r", "")
@@ -216,8 +244,10 @@ object VelocityUtils {
     init {
         // 设置初始化配置
         // 修复部分用户的velocity日志记录无权访问velocity.log文件问题
-        INIT_PROP.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-                "org.apache.velocity.runtime.log.Log4JLogChute")
+        INIT_PROP.setProperty(
+            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+            "org.apache.velocity.runtime.log.Log4JLogChute"
+        )
         INIT_PROP.setProperty("runtime.log.logsystem.log4j.logger", "velocity")
     }
 
@@ -241,15 +271,15 @@ object FileUtil {
 
     fun listFile(): List<String> {
         return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
-                .listFiles()
-                ?.filter { it.isDirectory }
-                ?.map { it.name } ?: emptyList()
+            .listFiles()
+            ?.filter { it.isDirectory }
+            ?.map { it.name } ?: emptyList()
     }
 
     fun listDirectory(): List<File> {
         return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
-                .listFiles()
-                ?.filter { it.isDirectory } ?: emptyList()
+            .listFiles()
+            ?.filter { it.isDirectory } ?: emptyList()
     }
 }
 
@@ -265,6 +295,8 @@ object NameUtils {
     fun capitalize(name: String) = name.capitalize()
 
     fun decapitalize(name: String) = name.decapitalize()
+
+    fun match(name: String, regex: String) = regex.toRegex().matches(name)
 
     fun hump2Underline(str: String): String {
         if (str.isEmpty()) {
@@ -317,11 +349,22 @@ object NameUtils {
 
 fun PsiFile.reformatCode() {
     try {
-        CodeStyleManager.getInstance(project).reformat(this)
+        this.commitAndUnblockDocument()
         JavaCodeStyleManager.getInstance(project).optimizeImports(this)
+        CodeStyleManager.getInstance(project).reformat(this)
     } catch (e: Exception) {
-        show(e.toString())
+        show("reformatCode Exception :\n$e")
     }
+}
+
+fun PsiFile.commitAndUnblockDocument(): Boolean {
+    val virtualFile = this.virtualFile ?: return false
+    val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+        ?: return false
+    val documentManager = PsiDocumentManager.getInstance(project)
+    documentManager.doPostponedOperationsAndUnblockDocument(document)
+    documentManager.commitDocument(document)
+    return true
 }
 
 fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
@@ -332,7 +375,11 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
             psiDirectory.apply {
                 findFile(psiFile.name)?.run {
                     PsiDocumentManager.getInstance(project).getDocument(this)?.run {
-                        replaceString(0, this.textLength, PsiDocumentManager.getInstance(project).getDocument(psiFile)!!.text)
+                        replaceString(
+                            0,
+                            this.textLength,
+                            PsiDocumentManager.getInstance(project).getDocument(psiFile)!!.text
+                        )
                         reformatCode()
                     }
                 } ?: run {
@@ -356,12 +403,14 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     val mainPanel = JPanel(FlowLayout())
 
     val listPanel = FileUtil.listDirectory()
-            .map {
-                val templatePanel = ListCheckboxPanel(it.name, it.listFiles()?.toList()
-                        ?: emptyList())
-                mainPanel.add(templatePanel)
-                templatePanel
-            }
+        .map {
+            val templatePanel = ListCheckboxPanel(
+                it.name, it.listFiles()?.toList()
+                    ?: emptyList()
+            )
+            mainPanel.add(templatePanel)
+            templatePanel
+        }
 
     // 构建dialog
     val dialogBuilder = DialogBuilder(project)
@@ -371,20 +420,24 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     dialogBuilder.addActionDescriptor(DialogBuilder.ActionDescriptor { dialogWrapper ->
         object : AbstractAction("OK") {
             override fun actionPerformed(e: ActionEvent) {
+                try {
+                    if (!isPanelSelected(*listPanel.toTypedArray())) {
+                        Messages.showWarningDialog("至少选择一个模板！", "MsgValue.TITLE_INFO")
+                        return
+                    }
+                    val selectedFiles = listPanel.flatMap {
+                        it.selectedItems
+                    }
 
-                if (!isPanelSelected(*listPanel.toTypedArray())) {
-                    Messages.showWarningDialog("至少选择一个模板！", "MsgValue.TITLE_INFO")
-                    return
+//                    show("generateCode selectedFiles $selectedFiles")
+                    selectedFiles.forEach {
+                        createFile(psiClass, selectedFile, it)
+                    }
+                    // 关闭并退出
+                    dialogWrapper.close(DialogWrapper.OK_EXIT_CODE)
+                } catch (e: Exception) {
+                    show("generateCode Exception ${e.stackTraceToString()}")
                 }
-                val selectedFiles = listPanel.flatMap {
-                    it.selectedItems
-                }
-
-                selectedFiles.forEach {
-                    createFile(psiClass, selectedFile, it)
-                }
-                // 关闭并退出
-                dialogWrapper.close(DialogWrapper.OK_EXIT_CODE)
 
             }
 
@@ -394,7 +447,7 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     dialogBuilder.show()
 }
 
-fun isPanelSelected(@NotNull vararg checkboxPanels: ListCheckboxPanel): Boolean {
+fun isPanelSelected(vararg checkboxPanels: ListCheckboxPanel): Boolean {
     for (checkboxPanel in checkboxPanels) {
         if (checkboxPanel.selectedItems.isNotEmpty()) {
             return true
@@ -420,13 +473,13 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
         add(textPane)
         checkBoxList = if (items.isNotEmpty()) {
             ArrayList<JBCheckBox>(items.size)
-                    .also {
-                        for (item in items) {
-                            val checkBox = JBCheckBox(item.name)
-                            it.add(checkBox)
-                            add(checkBox)
-                        }
+                .also {
+                    for (item in items) {
+                        val checkBox = JBCheckBox(item.name)
+                        it.add(checkBox)
+                        add(checkBox)
                     }
+                }
 
         } else {
             emptyList()
@@ -457,12 +510,12 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
 fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
     // 获取默认参数
     val param: MutableMap<String, Any> = getDefaultParam()
-
     param["fileClass"] = psiClass.apply {
         psiClass.allFields.forEach {
             Env.println("createFile $it ; javaClass: ${it.javaClass} ; static : ${it.hasModifierProperty("static")} ")
         }
     }
+    param["packageName"] = (psiClass.containingFile as PsiJavaFile).packageName
     param["file"] = selectedFile
     param["tool"] = NameUtils
     val templateSetting = TemplateSetting()
@@ -472,10 +525,13 @@ fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
     val inputString = FileUtil.loadFile(tempfile)
     val code = VelocityUtils.generate(inputString, param).trim()
 
-    val psiFile: PsiJavaFile = PsiFileFactory.getInstance(project)
-            .createFileFromText(templateSetting.fileName,
-                    psiClass.language, code) as PsiJavaFile
+    val psiFile: PsiJavaFile = PsiFileFactory.getInstance(selectedFile.project)
+        .createFileFromText(
+            templateSetting.fileName,
+            psiClass.language, code
+        ) as PsiJavaFile
 
+//    show("createFile selectedFile $selectedFile")
     addOrReplaceFile(selectedFile, psiFile)
 //    showCode(project!!, psiFile)
 }

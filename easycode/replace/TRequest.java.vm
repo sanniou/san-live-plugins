@@ -1,0 +1,17 @@
+
+$!setting.setFileName($tool.append($fileClass.name, ".java"))
+
+package ${packageName};
+
+import com.onestep.pmms.model.message.BasePmmsRequest;
+import lombok.Data;
+
+
+/**
+ * @author jichang
+ * @createTime [2021/12/06 16:06]
+ */
+@Data
+public class $!{fileClass.name} extends BasePmmsRequest {
+
+}

@@ -41,24 +41,29 @@ object Env {
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str\n", ConsoleViewContentType.LOG_INFO_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
+            ConsoleViewContentType.LOG_INFO_OUTPUT
+        )
     }
 }
 
 if (Env.startup || !isIdeStartup) {
     Env.project = project
-    val extensionPoint: ExtensionPoint<CheckinHandlerFactory> = Extensions.getRootArea().getExtensionPoint("com.intellij.checkinHandlerFactory")
+    val extensionPoint: ExtensionPoint<CheckinHandlerFactory> =
+        Extensions.getRootArea().getExtensionPoint("com.intellij.checkinHandlerFactory")
     extensionPoint.extensionList
-            .filter {
-                Env.println(it::class.java.name)
-                it.javaClass.name == VersionCheckFactory::class.java.name
-            }
-            .forEach {
-                Env.println("unregisterExtension" + it::class.java.name)
-                extensionPoint.unregisterExtension(it)
-            }
+        .filter {
+            Env.println(it::class.java.name)
+            it.javaClass.name == VersionCheckFactory::class.java.name
+        }
+        .forEach {
+            Env.println("unregisterExtension" + it::class.java.name)
+            extensionPoint.unregisterExtension(it)
+        }
 
     extensionPoint.registerExtension(VersionCheckFactory())
+    show("register VersionCheck success")
 }
 
 
@@ -67,19 +72,20 @@ if (Env.startup || !isIdeStartup) {
 class VersionCheckHandler(val checkinProjectPanel: CheckinProjectPanel) : CheckinHandler() {
 
     override fun beforeCheckin(): ReturnResult {
-        if (!((project?.name ?: "").contains("pmms"))) {
+        val project = checkinProjectPanel.project
+        if (!(project.name.contains("pmms"))) {
             return ReturnResult.COMMIT
         }
-        show("before check in")
+        Env.println("before check in")
         val updateApi = (checkinProjectPanel.component as ChangesViewCommitPanel).changesView
-                .changes
-                .filter {
-                    Env.println(it.virtualFile!!.path)
-                    it.virtualFile!!.path.contains("controller")
-                }
-                .isNotEmpty
+            .changes
+            .filter {
+                Env.println(it.virtualFile!!.path)
+                it.virtualFile!!.path.contains("controller")
+            }
+            .isNotEmpty
         Env.println("controller changed = $updateApi")
-        val result = updateVersion(updateApi, checkinProjectPanel.project)
+        val result = updateVersion(updateApi, project)
         show("before check in result = $result")
 
 
@@ -111,7 +117,7 @@ class VersionCheckFactory : CheckinHandlerFactory() {
 fun updateVersion(updateApi: Boolean, project: Project): CheckinHandler.ReturnResult {
     try {
         val pomFiles = FilenameIndex.getFilesByName(project, "pom.xml", GlobalSearchScope.projectScope(project))
-        val pomFile = pomFiles.get(0)
+        val pomFile = pomFiles[0]
         val xmlFile = pomFile as XmlFile
         var date = LocalDateTime.now()
         Env.println("date date.hour ${date.hour}")
@@ -201,19 +207,17 @@ fun updateVersion(updateApi: Boolean, project: Project): CheckinHandler.ReturnRe
 
 
 fun createComment(project: Project, s: String): XmlComment {
-    val element: XmlTag = XmlElementFactory.getInstance(project).createTagFromText("<foo><!-- $s --></foo>", XMLLanguage.INSTANCE)
+    val element: XmlTag =
+        XmlElementFactory.getInstance(project).createTagFromText("<foo><!-- $s --></foo>", XMLLanguage.INSTANCE)
     return PsiTreeUtil.getChildOfType(element, XmlComment::class.java)!!
 }
 
 fun com.intellij.psi.PsiFile.commitAndUnblockDocument(): Boolean {
     val virtualFile = this.virtualFile ?: return false
     val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-            ?: return false
+        ?: return false
     val documentManager = com.intellij.psi.PsiDocumentManager.getInstance(project)
     documentManager.doPostponedOperationsAndUnblockDocument(document)
     documentManager.commitDocument(document)
     return true
 }
-
-
-show("run success z")

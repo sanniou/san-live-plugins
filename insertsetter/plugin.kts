@@ -35,7 +35,10 @@ object Env {
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str\n", ConsoleViewContentType.LOG_INFO_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
+            ConsoleViewContentType.LOG_INFO_OUTPUT
+        )
     }
 }
 
@@ -43,12 +46,14 @@ if (Env.startup || !isIdeStartup) {
     Env.project = project
 
     val actionsClasses =
-            arrayOf(GenerateSetAction::class.java,
-                    GenerateSetWithParamAction::class.java,
-                    GenerateBuilderAction::class.java,
-                    GenerateSetWithDefaultAction::class.java,
-                    GenerateReturnSetAction::class.java,
-                    GenerateReturnBuilderAction::class.java)
+        arrayOf(
+            GenerateSetAction::class.java,
+            GenerateSetWithParamAction::class.java,
+            GenerateBuilderAction::class.java,
+            GenerateSetWithDefaultAction::class.java,
+            GenerateReturnSetAction::class.java,
+            GenerateReturnBuilderAction::class.java
+        )
 
     IntentionManager.getInstance().apply {
         intentionActions.forEach {
@@ -173,7 +178,8 @@ open class GenerateBuilderAction : BaseGenerateSetAction() {
         insertSetter(psiType, editor, project, psiElement)
     }
 
-    override fun getSetterMethodStr(elementName: String, method: PsiMethod) = "\n.${method.name.substring(3).decapitalize()}(null)"
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod) =
+        "\n.${method.name.substring(3).decapitalize()}(null)"
 }
 
 class GenerateSetWithDefaultAction : GenerateSetAction() {
@@ -202,31 +208,36 @@ class GenerateSetWithParamAction : GenerateSetAction() {
 
     private var currentParameters = emptyArray<PsiParameter>()
 
-    private val methodMap = mutableMapOf<String, String>()
+    private val defaultMethodMap = mutableMapOf("timestamp" to "System.currentTimeMillis()", "userId" to "getUserId()")
+
+    private val methodParamMap = mutableMapOf<String, String>()
     override fun getText() = "GenerateSetWithParam"
 
     override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
         if (!super.isAvailable(project1, editor, psiElement)) {
-            return false;
+            return false
         }
         Env.println("$this + isAvailable:${psiElement.context}")
-        methodMap.clear()
+        methodParamMap.clear()
         val psiMethod = psiElement.getContainingMethod()
         currentParameters = psiMethod?.parameterList?.parameters ?: emptyArray()
         currentParameters.forEach { parameter ->
             PsiTypesUtil.getPsiClass(parameter.type)!!.allMethods
-                    .filter { it.name.startsWith("get") }
-                    .forEach {
-                        methodMap[it.name.substring(3)] = parameter.name
-                    }
+                .filter { it.name.startsWith("get") }
+                .forEach {
+                    methodParamMap[it.name.substring(3)] = parameter.name
+                }
         }
-        return currentParameters.isNotEmpty() && super.isAvailable(project1, editor, psiElement)
+        return currentParameters.isNotEmpty()
     }
 
     override fun getSetterMethodStr(elementName: String, method: PsiMethod): String {
         val fieldName = method.name.substring(3)
-        if (methodMap.contains(fieldName)) {
-            return "\n$elementName.set${fieldName}(${methodMap[fieldName]}.get${fieldName}());"
+        if (defaultMethodMap.contains(fieldName)) {
+            return "\n$elementName.set${fieldName}(${defaultMethodMap[fieldName]});"
+        }
+        if (methodParamMap.contains(fieldName)) {
+            return "\n$elementName.set${fieldName}(${methodParamMap[fieldName]}.get${fieldName}());"
         }
         return "\n$elementName.set${fieldName}(null);"
 
@@ -241,18 +252,18 @@ class GenerateReturnBuilderAction : BaseGenerateSetAction() {
     override fun isAvailable(project: Project, editor: Editor?, psiElement: PsiElement): Boolean {
         Env.println("$this + isAvailable:${psiElement.context}")
         return psiElement.getContainingMethod()
-                ?.returnType
-                ?.let { type ->
+            ?.returnType
+            ?.let { type ->
 
-                    Env.println("$this + isAvailable ${type.presentableText.toLowerCase()}")
-                    (type.presentableText.toLowerCase() == "void").not()
-                            .and(PsiTypesUtil.getPsiClass(type)
-                                    ?.children
-                                    ?.filterIsInstance<PsiModifierList>()
-                                    ?.flatMap { it.annotations.toList() }
-                                    ?.firstOrNull { it.qualifiedName == "lombok.Builder" }
-                                    != null)
-                } ?: false
+                Env.println("$this + isAvailable ${type.presentableText.toLowerCase()}")
+                (type.presentableText.toLowerCase() == "void").not()
+                    .and(PsiTypesUtil.getPsiClass(type)
+                        ?.children
+                        ?.filterIsInstance<PsiModifierList>()
+                        ?.flatMap { it.annotations.toList() }
+                        ?.firstOrNull { it.qualifiedName == "lombok.Builder" }
+                            != null)
+            } ?: false
     }
 
     override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
@@ -264,7 +275,8 @@ class GenerateReturnBuilderAction : BaseGenerateSetAction() {
         insertSetter(psiType, editor, project, psiElement, parameterName)
     }
 
-    override fun getSetterMethodStr(elementName: String, method: PsiMethod) = "\n.${method.name.substring(3).decapitalize()}()"
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod) =
+        "\n.${method.name.substring(3).decapitalize()}()"
 
 
     override fun beforeSetter(parameterName: String, offset: Int, editor: Editor, psiType: PsiType): String {
@@ -304,7 +316,13 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
     }
 
 
-    protected fun insertSetter(psiType: PsiType, editor: Editor, project: Project, psiElement: PsiElement, parameterName: String? = null) {
+    protected fun insertSetter(
+        psiType: PsiType,
+        editor: Editor,
+        project: Project,
+        psiElement: PsiElement,
+        parameterName: String? = null
+    ) {
 
         val elementName = parameterName ?: psiElement.text!!
         val psiFile = psiElement.containingFile
@@ -317,12 +335,12 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
                 val beforeCode = beforeSetter(elementName, lineEndOffset, editor, psiType)
 
                 val fold = offsetClassElement.allMethods
-                        .filter { it.name.startsWith("set") }
-                        .fold(lineEndOffset + beforeCode.length) { offset, method ->
-                            val str = getSetterMethodStr(elementName, method)
-                            editor.document.insertString(offset, str)
-                            offset + str.length
-                        }
+                    .filter { it.name.startsWith("set") }
+                    .fold(lineEndOffset + beforeCode.length) { offset, method ->
+                        val str = getSetterMethodStr(elementName, method)
+                        editor.document.insertString(offset, str)
+                        offset + str.length
+                    }
 
                 val afterCode = afterSetter(elementName, fold, editor, psiType)
 
@@ -344,7 +362,7 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
     }
 
     protected open fun getSetterMethodStr(elementName: String, method: PsiMethod) =
-            "\n$elementName.${method.name}();"
+        "\n$elementName.${method.name}();"
 
 
     fun PsiFile.reformatCode() {
@@ -366,7 +384,7 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
     fun PsiFile.commitAndUnblockDocument(): Boolean {
         val virtualFile = this.virtualFile ?: return false
         val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-                ?: return false
+            ?: return false
         val documentManager = PsiDocumentManager.getInstance(project)
         documentManager.doPostponedOperationsAndUnblockDocument(document)
         documentManager.commitDocument(document)
@@ -391,15 +409,15 @@ typealias ValueProvider = () -> String
 object DefaultTemplate {
 
     val typeValueProvider = mapOf<String, Map<String, ValueProvider>>(
-            "String" to mapOf("Id" to { "\"${UUID.randomUUID()}\"" },
-                    "Name" to { "\"UserName\"" },
-                    "Code" to { "\"KLSCODE001\"" },
-                    "Phone" to { "\"13901010203\"" }
-            ),
-            "Long" to mapOf("time" to { "${System.currentTimeMillis()}L" },
-                    "Time" to { "${System.currentTimeMillis()}L" },
-                    "date" to { "${System.currentTimeMillis()}L" },
-                    "Date" to { "${System.currentTimeMillis()}L" })
+        "String" to mapOf("Id" to { "\"${UUID.randomUUID()}\"" },
+            "Name" to { "\"UserName\"" },
+            "Code" to { "\"KLSCODE001\"" },
+            "Phone" to { "\"13901010203\"" }
+        ),
+        "Long" to mapOf("time" to { "${System.currentTimeMillis()}L" },
+            "Time" to { "${System.currentTimeMillis()}L" },
+            "date" to { "${System.currentTimeMillis()}L" },
+            "Date" to { "${System.currentTimeMillis()}L" })
 
     )
 

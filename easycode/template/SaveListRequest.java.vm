@@ -1,0 +1,43 @@
+$!setting.setFileName($tool.append("Save",$fileClass.name, "ListRequest.java"))
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}request;
+#foreach($column in $file.importList.allImportStatements)
+    ${column.text}
+#end
+import ${fileClass.qualifiedName};
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+
+import java.util.List;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
+import lombok.Data;
+
+@Data
+public class Save$!{fileClass.name}ListRequest extends BasePmmsDataRequest {
+
+    @NotEmpty
+    @Valid
+    private List<$!{fileClass.name}Data> dataList;
+
+    @NotNull
+    private Boolean ignoreNull;
+
+    @Data
+    public static class $!{fileClass.name}Data {
+
+        #foreach($column in $fileClass.allFields)
+            #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
+                #if(${column.docComment})
+                    /**
+                     * ${column.docComment.text}
+                     */
+                #end
+                private $!{column.type.name} $!{column.name};
+            #end
+        #end
+
+    }
+}

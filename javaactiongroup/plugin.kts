@@ -1,3 +1,4 @@
+import com.google.common.base.CaseFormat
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.*
@@ -38,7 +39,8 @@ object Env {
             return
         }
         if (consoleView == null) {
-            consoleView = PluginUtil.showInConsole("${DateFormat.getDateTimeInstance().format(Date())} : $message \n", project!!)
+            consoleView =
+                PluginUtil.showInConsole("${DateFormat.getDateTimeInstance().format(Date())} : $message \n", project!!)
         } else {
             consoleView?.println(message)
         }
@@ -69,7 +71,7 @@ if (Env.startup || !isIdeStartup) {
     val action = JavaActionGroup()
     actionManager.registerAction(actionId, action)
     actionGroup.addAction(action, Constraints.FIRST)
-    action.templatePresentation.setText(displayText, true)
+    action.templatePresentation.setText(displayText, false)
     show("register java action group success")
 }
 
@@ -151,10 +153,11 @@ class JavaActionGroup : ActionGroup() {
             return arrayOfAnActions
         }
         arrayOfAnActions = arrayOf(
-                checkAction(AddJsonPropertyAction::class),
-                checkAction(FormatBlankLineAction::class),
-                checkAction(CopyParentProfileAction::class),
-                checkAction(FoldRightProfileAction::class)
+            checkAction(AddJsonPropertyAction::class),
+            checkAction(AddJpaColumnAction::class),
+            checkAction(FormatBlankLineAction::class),
+            checkAction(CopyParentProfileAction::class),
+            checkAction(FoldRightProfileAction::class),
         )
         return arrayOfAnActions
     }
@@ -205,37 +208,39 @@ class FoldRightProfileAction : AnAction("FoldRightProfile") {
 class CopyParentProfileAction : AnAction("CopyParentProfile") {
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project!!
-        val editor = project.currentEditor!!
-        val psiFile = event.getData(LangDataKeys.PSI_FILE)
-        Env.println("psiFile2$psiFile")
-        if (psiFile !is PsiJavaFile) {
-            return
-        }
+        val psiElement: PsiNamedElement = (event.getData(LangDataKeys.PSI_ELEMENT) as? PsiClass)
+            ?: (event.getData(LangDataKeys.PSI_FILE) as? PsiJavaFile) ?: return
+        Env.println("psiElement = $psiElement")
+
         WriteCommandAction.runWriteCommandAction(project) {
-            Env.println("psiFile : $psiFile")
-            psiFile.classes.forEach { psiClass ->
+            val psiClasses = when (psiElement) {
+                is PsiJavaFile -> psiElement.classes
+                is PsiClass -> arrayOf(psiElement)
+                else -> return@runWriteCommandAction;
+            }
+            psiClasses.forEach { psiClass ->
                 Env.println("psiClass : $psiClass")
 
                 val fields = psiClass.fields
                 psiClass.allFields.toMutableList()
-                        .apply {
-                            removeAll { pField ->
-                                fields.find { it.name == pField.name } != null
-                            }
+                    .apply {
+                        removeAll { pField ->
+                            fields.find { it.name == pField.name } != null
                         }
-                        .filter { !it.hasModifierProperty("static") }
-                        .forEach { field ->
-                            Env.println("field : $field")
-                            val fieldz = psiClass.add(field) as PsiField
+                    }
+                    .filter { !it.hasModifierProperty("static") }
+                    .forEach { field ->
+                        Env.println("field : $field")
+                        val fieldz = psiClass.add(field) as PsiField
 
-                            try {
-                                fieldz.annotations.forEach {
-                                    it.delete()
-                                }
-                            } catch (e: Exception) {
-                                Env.println(e)
+                        try {
+                            fieldz.annotations.forEach {
+                                it.delete()
                             }
+                        } catch (e: Exception) {
+                            Env.println(e)
                         }
+                    }
 
                 psiClass.extendsListTypes.forEach { parent ->
                     parent.psiContext?.also {
@@ -243,8 +248,8 @@ class CopyParentProfileAction : AnAction("CopyParentProfile") {
                     }
 
                 }
-                psiFile.reformatCode()
             }
+            psiElement.containingFile.reformatCode()
         }
     }
 
@@ -298,7 +303,8 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
 }
 
 //#######################################################################################################
-class AddJsonPropertyAction : AnAction("AddJsonProperty") {
+
+open class AddJpaColumnAction : AnAction("AddJpaColumnAction") {
 
 
     override fun actionPerformed(event: AnActionEvent) {
@@ -316,7 +322,8 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
                 handleClass(editor.document, offset, psiClass)
             }
 
-            val jsonPropertyClass = JavaPsiFacade.getInstance(project).findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
+            val jsonPropertyClass = JavaPsiFacade.getInstance(project)
+                .findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
             psiFile.commitAndUnblockDocument()
             if (psiFile.findImportReferenceTo(jsonPropertyClass) == null) {
                 psiFile.importClass(jsonPropertyClass)
@@ -346,30 +353,103 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
     fun handleField(document: Document, offset: Wrapper<Int>, field: PsiField) {
         field.annotations.forEach {
             Env.println("$field annotations : ${it.text}")
-            if (it.text.startsWith("@JsonProperty")) {
+            if (it.text.startsWith(annotationName())) {
                 return
             }
         }
         Env.println("field$field off ${field.textOffset} da${field.startOffset}")
-        document.insertString(field.startOffset + offset.get(), "@JsonProperty(\"${field.name}\")\n".apply { offset.set(offset.get() + length) })
+        document.insertString(
+            field.startOffset + offset.get(),
+            annotationValue(field).apply { offset.set(offset.get() + length) })
     }
+
+    fun annotationName() = "@Column"
+
+
+    fun annotationValue(field: PsiField) =
+        "${annotationName()}(name=\"${CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field.name)}\")\n"
+}
+
+
+class AddJsonPropertyAction : AnAction("AddJsonProperty") {
+
+
+    override fun actionPerformed(event: AnActionEvent) {
+        val project = event.project!!
+        val editor = project.currentEditor!!
+        val psiFile = event.getData(LangDataKeys.PSI_FILE)
+        if (psiFile !is PsiJavaFile) {
+            return
+        }
+
+        WriteCommandAction.runWriteCommandAction(project) {
+
+            val offset = Wrapper(0)
+            psiFile.classes.forEach { psiClass ->
+                handleClass(editor.document, offset, psiClass)
+            }
+
+            val jsonPropertyClass = JavaPsiFacade.getInstance(project)
+                .findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
+            psiFile.commitAndUnblockDocument()
+            if (psiFile.findImportReferenceTo(jsonPropertyClass) == null) {
+                psiFile.importClass(jsonPropertyClass)
+            }
+
+            psiFile.reformatCode()
+
+        }
+
+    }
+
+    fun handleClass(document: Document, offset: Wrapper<Int>, clazz: PsiClass) {
+        Env.println("psiClass=$clazz")
+        clazz.children.forEach {
+            Env.println("psiClass children =$it")
+            when (it) {
+                is PsiClass -> {
+                    handleClass(document, offset, it)
+                }
+                is PsiField -> {
+                    handleField(document, offset, it)
+                }
+            }
+        }
+    }
+
+    fun handleField(document: Document, offset: Wrapper<Int>, field: PsiField) {
+        field.annotations.forEach {
+            Env.println("$field annotations : ${it.text}")
+            if (it.text.startsWith(annotationName())) {
+                return
+            }
+        }
+        Env.println("field$field off ${field.textOffset} da${field.startOffset}")
+        document.insertString(
+            field.startOffset + offset.get(),
+            annotationValue(field).apply { offset.set(offset.get() + length) })
+    }
+
+    open fun annotationName() = "@JsonProperty"
+
+    open fun annotationValue(field: PsiField) = "${annotationName()}(\"${field.name}\")\n"
 
 }
 
 fun PsiFile.commitAndUnblockDocument(): Boolean {
     val virtualFile = this.virtualFile ?: return false
     val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-            ?: return false
+        ?: return false
     val documentManager = PsiDocumentManager.getInstance(project)
     documentManager.doPostponedOperationsAndUnblockDocument(document)
     documentManager.commitDocument(document)
     return true
 }
 
-fun PsiFile.reformatCode() {
+fun PsiElement.reformatCode() {
     try {
         CodeStyleManager.getInstance(project).reformat(this)
-        JavaCodeStyleManager.getInstance(project).optimizeImports(this)
+        JavaCodeStyleManager.getInstance(project).optimizeImports(this.containingFile)
     } catch (e: Exception) {
         show(e.toString())
     }

@@ -36,7 +36,10 @@ object Env {
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str\n", ConsoleViewContentType.LOG_INFO_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
+            ConsoleViewContentType.LOG_INFO_OUTPUT
+        )
     }
 }
 
@@ -98,19 +101,19 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         Env.println("psiElement$psiElement")
         Env.println("psiElement size${psiClass.allFields.size}")
         psiClass.allFields.filter { it.name.endsWith("Service") || it.name.endsWith("service") }
-                .forEach { serviceField ->
-                    Env.println("psiField$serviceField")
-                    PsiTypesUtil.getPsiClass(serviceField.type)
-                            ?.methods
-                            ?.forEach { method ->
-                                Env.println("methods$method")
-                                psiClass.methods.firstOrNull { psiMethod -> psiMethod.name == method.name }
-                                        ?: run {
-                                            Env.println("insertMethod=$method")
-                                            contentLength += insertMethod(psiElement, method, serviceField.name, editor, project)
-                                        }
+            .forEach { serviceField ->
+                Env.println("psiField$serviceField")
+                PsiTypesUtil.getPsiClass(serviceField.type)
+                    ?.methods
+                    ?.forEach { method ->
+                        Env.println("methods$method")
+                        psiClass.methods.firstOrNull { psiMethod -> psiMethod.name == method.name }
+                            ?: run {
+                                Env.println("insertMethod=$method")
+                                contentLength += insertMethod(psiElement, method, serviceField.name, editor, project)
                             }
-                }
+                    }
+            }
         // fixme not work
         try {
             WriteCommandAction.runWriteCommandAction(project) {
@@ -133,7 +136,13 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         return emptyList()
     }
 
-    fun insertMethod(psiElement: PsiElement, method: PsiMethod, serviceName: String, editor: Editor, project: Project): Int {
+    fun insertMethod(
+        psiElement: PsiElement,
+        method: PsiMethod,
+        serviceName: String,
+        editor: Editor,
+        project: Project
+    ): Int {
         if (method.parameters.isEmpty()) {
             Env.println("not insert empty paramters method:$method")
             return 0
@@ -144,11 +153,26 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         Env.println("insertMethod: returnType=$returnType ;requestType=$requestType")
 
         val psiFile = psiElement.containingFile as PsiJavaFile
-        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("com.onestep.pmms.model.message.PmmsResponse", GlobalSearchScope.allScope(project))!!)
-        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.web.bind.annotation.PostMapping", GlobalSearchScope.allScope(project))!!)
-        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.validation.annotation.Validated", GlobalSearchScope.allScope(project))!!)
-        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("org.springframework.web.bind.annotation.RequestBody", GlobalSearchScope.allScope(project))!!)
-        psiFile.importClass(JavaPsiFacade.getInstance(project).findClass("io.swagger.annotations.ApiOperation", GlobalSearchScope.allScope(project))!!)
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("com.onestep.pmms.model.message.PmmsResponse", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.web.bind.annotation.PostMapping", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.validation.annotation.Validated", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.web.bind.annotation.RequestBody", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("io.swagger.annotations.ApiOperation", GlobalSearchScope.allScope(project))!!
+        )
         psiFile.commitAndUnblockDocument()
         if (requestType is PsiType) {
             try {
@@ -178,16 +202,19 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
 
         var contentLength: Int
         val presentableText = returnType?.presentableText
-        val (returnName, tryMethodName) = if (presentableText == "void") Pair("Void", "tryConsumer") else Pair(presentableText, "tryFunction")
+        val (returnName, tryMethodName) = if (presentableText == "void") Pair("Void", "tryConsumer") else Pair(
+            presentableText,
+            "tryFunction"
+        )
         Env.println("insert content ")
-        val methodContent = """
+        val methodContent =
+            """
     @PostMapping("/${method.name}")
     @ApiOperation(value = "${method.name}")
-    public PmmsResponse<$returnName> ${method.name}(
-            @RequestBody @Validated ${(requestType as PsiType).presentableText} request) {
+    public PmmsResponse<$returnName> ${method.name}(@RequestBody @Validated ${(requestType as PsiType).presentableText} request) {
         return ${tryMethodName}(request, () -> $serviceName.${method.name}(request));
     }
-    """.trimIndent().apply { contentLength = this.length }
+        """.trimIndent().apply { contentLength = this.length }
         WriteCommandAction.runWriteCommandAction(project) {
             editor.document.insertString(psiElement.startOffset, methodContent)
         }
@@ -199,7 +226,7 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
 fun PsiFile.commitAndUnblockDocument(): Boolean {
     val virtualFile = this.virtualFile ?: return false
     val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-            ?: return false
+        ?: return false
     val documentManager = PsiDocumentManager.getInstance(project)
     documentManager.doPostponedOperationsAndUnblockDocument(document)
     documentManager.commitDocument(document)

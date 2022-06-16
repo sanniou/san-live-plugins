@@ -27,7 +27,6 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBCheckBox
 import liveplugin.PluginUtil
 import liveplugin.show
-import liveplugin.toUrl
 import org.apache.velocity.VelocityContext
 import org.apache.velocity.app.VelocityEngine
 import org.apache.velocity.runtime.RuntimeConstants
@@ -147,13 +146,13 @@ fun generateCode(tempFile: File? = null, currentFile: PsiJavaFile? = null) {
 
     Env.println("generateCode psiClass $psiClass")
     try {
-
         if (tempFile != null) {
             createFile(psiClass, actuallyFile, tempFile)
         } else {
             showSelected(psiClass, actuallyFile)
         }
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
+        Env.println("generateCode Exception $e")
         show("generateCode Exception $e")
     }
 }
@@ -261,10 +260,9 @@ object FileUtil {
 
     fun loadFile(file: File): String {
         try {
-            return UrlUtil.loadText(file.toUrl()).replace("\r", "")
+            return UrlUtil.loadText(file.toURI().toURL()).replace("\r", "")
         } catch (e: Exception) {
             Env.println("loadFile IOException : $e")
-
         }
         return ""
     }
@@ -277,8 +275,14 @@ object FileUtil {
     }
 
     fun listDirectory(): List<File> {
-        return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
+        return File(File(this.javaClass.getResource("").file).parentFile.parent + "/live-plugins" + "/easycode")
+            .apply {
+                Env.println("listDirectory : $this")
+            }
             .listFiles()
+            ?.apply {
+                Env.println("listDirectory result : ${this.joinToString { it.toString() }}")
+            }
             ?.filter { it.isDirectory } ?: emptyList()
     }
 }
@@ -387,7 +391,7 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
                     findFile(psiFile.name)?.reformatCode()
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Env.println("addOrReplaceFile : " + e)
         }
     }
@@ -405,15 +409,18 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     val listPanel = FileUtil.listDirectory()
         .map {
             val templatePanel = ListCheckboxPanel(
-                it.name, it.listFiles()?.toList()
-                    ?: emptyList()
+                it.name,
+                it.listFiles()?.toList() ?: emptyList()
             )
             mainPanel.add(templatePanel)
             templatePanel
+        }.apply {
+            Env.println("listPanel : $this")
         }
-
     // 构建dialog
+    Env.println("dialogBuilder : $project")
     val dialogBuilder = DialogBuilder(project)
+    Env.println("dialogBuilder 2 : $dialogBuilder")
     dialogBuilder.setTitle("MsgValue.TITLE_INFO")
     dialogBuilder.setNorthPanel(MultiLineLabel("请选择要导出的code："))
     dialogBuilder.setCenterPanel(mainPanel)

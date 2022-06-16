@@ -32,6 +32,7 @@ import $!{basePackage}.model.request.Fetch$!{fileClass.name}ListRequest;
 import $!{basePackage}.model.request.Save$!{fileClass.name}ListRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import com.onestep.pmms.utils.ExceptionGenerator;
 
 import javax.persistence.EntityManager;
@@ -115,8 +116,8 @@ final List<BooleanExpression> expressionList=new ArrayList<>();
 #end
 
 
-//===== order ===============
-final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
+        //===== order ===============
+        final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
         case ASC:
@@ -139,6 +140,7 @@ final JPAQuery<$!{fileClass.name}> jpaQuery=new JPAQuery<>(entityManager)
 
 
 @Override
+@Transactional(rollbackFor = Exception.class)
 public void delete$!{fileClass.name}(DeleteDataRequest request){
     $!{tool.decapitalize($!{fileClass.name})}Dao.softDelete(System.currentTimeMillis(),request.getUserId(),request.getId());
         }

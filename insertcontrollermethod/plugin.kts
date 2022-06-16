@@ -153,27 +153,7 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         Env.println("insertMethod: returnType=$returnType ;requestType=$requestType")
 
         val psiFile = psiElement.containingFile as PsiJavaFile
-        psiFile.importClass(
-            JavaPsiFacade.getInstance(project)
-                .findClass("com.onestep.pmms.model.message.PmmsResponse", GlobalSearchScope.allScope(project))!!
-        )
-        psiFile.importClass(
-            JavaPsiFacade.getInstance(project)
-                .findClass("org.springframework.web.bind.annotation.PostMapping", GlobalSearchScope.allScope(project))!!
-        )
-        psiFile.importClass(
-            JavaPsiFacade.getInstance(project)
-                .findClass("org.springframework.validation.annotation.Validated", GlobalSearchScope.allScope(project))!!
-        )
-        psiFile.importClass(
-            JavaPsiFacade.getInstance(project)
-                .findClass("org.springframework.web.bind.annotation.RequestBody", GlobalSearchScope.allScope(project))!!
-        )
-        psiFile.importClass(
-            JavaPsiFacade.getInstance(project)
-                .findClass("io.swagger.annotations.ApiOperation", GlobalSearchScope.allScope(project))!!
-        )
-        psiFile.commitAndUnblockDocument()
+        importClasses(psiFile, project)
         if (requestType is PsiType) {
             try {
                 PsiTypesUtil.getPsiClass(requestType)?.let {
@@ -219,6 +199,30 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
             editor.document.insertString(psiElement.startOffset, methodContent)
         }
         return contentLength
+    }
+
+    private fun importClasses(psiFile: PsiJavaFile, project: Project) {
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("com.onestep.pmms.model.message.PmmsResponse", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.web.bind.annotation.PostMapping", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.validation.annotation.Validated", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("org.springframework.web.bind.annotation.RequestBody", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.importClass(
+            JavaPsiFacade.getInstance(project)
+                .findClass("io.swagger.annotations.ApiOperation", GlobalSearchScope.allScope(project))!!
+        )
+        psiFile.commitAndUnblockDocument()
     }
 
 }

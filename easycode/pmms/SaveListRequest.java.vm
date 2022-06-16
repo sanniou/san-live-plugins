@@ -31,9 +31,7 @@ public class Save$!{fileClass.name}ListRequest extends BasePmmsDataRequest {
         #foreach($column in $fileClass.allFields)
             #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
                 #if(${column.docComment})
-                    /**
-                     * ${column.docComment.text}
-                     */
+                    ${column.docComment.text}
                 #end
                 private $!{column.type.name} $!{column.name};
             #end

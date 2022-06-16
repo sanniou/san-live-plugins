@@ -3,7 +3,6 @@ import com.intellij.util.ui.GraphicsUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import liveplugin.show
-import liveplugin.toUrl
 import java.awt.*
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -100,9 +99,33 @@ class NyanProgressBarUi : BasicProgressBarUI() {
         g2d.fill(RoundRectangle2D.Float(0F, 0F, w - off, h - off, R2, R2))
         g2d.color = background
         g2d.fill(RoundRectangle2D.Float(off, off, w - 2f * off - off, h - 2f * off - off, R, R))
-        g2d.paint = LinearGradientPaint(0F, JBUI.scale(2).toFloat(), 0F, h - JBUI.scale(6).toFloat(), floatArrayOf(ONE_OVER_SEVEN * 1, ONE_OVER_SEVEN * 2, ONE_OVER_SEVEN * 3, ONE_OVER_SEVEN * 4, ONE_OVER_SEVEN * 5, ONE_OVER_SEVEN * 6, ONE_OVER_SEVEN * 7), arrayOf(Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.cyan, Color.blue, VIOLET))
+        g2d.paint = LinearGradientPaint(
+            0F,
+            JBUI.scale(2).toFloat(),
+            0F,
+            h - JBUI.scale(6).toFloat(),
+            floatArrayOf(
+                ONE_OVER_SEVEN * 1,
+                ONE_OVER_SEVEN * 2,
+                ONE_OVER_SEVEN * 3,
+                ONE_OVER_SEVEN * 4,
+                ONE_OVER_SEVEN * 5,
+                ONE_OVER_SEVEN * 6,
+                ONE_OVER_SEVEN * 7
+            ),
+            arrayOf(Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.cyan, Color.blue, VIOLET)
+        )
         // diff 1
-        g2d.fill(RoundRectangle2D.Float(2f * off, 2f * off, if (full) w.toFloat() else amountFull - JBUI.scale(5f), h - JBUI.scale(5f), JBUI.scale(7f), JBUI.scale(7f)))
+        g2d.fill(
+            RoundRectangle2D.Float(
+                2f * off,
+                2f * off,
+                if (full) w.toFloat() else amountFull - JBUI.scale(5f),
+                h - JBUI.scale(5f),
+                JBUI.scale(7f),
+                JBUI.scale(7f)
+            )
+        )
         // diff 2
         icon.paintIcon(progressBar, g2d, (if (full) startOffset else amountFull) - JBUI.scale(10), -JBUI.scale(7))
 
@@ -154,11 +177,27 @@ object NyanIcons {
 
     val CAT_ICON: Icon by lazy {
         val loadFile = FileUtil.loadFile("/resources/cat.png")
-        ImageIcon(ImageIcon(loadFile.toUrl()).image.getScaledInstance(imageSize, imageSize, Image.SCALE_DEFAULT))
+        ImageIcon(
+            ImageIcon(loadFile.toURI().toURL())
+                .image
+                .getScaledInstance(
+                    imageSize,
+                    imageSize,
+                    Image.SCALE_DEFAULT
+                )
+        )
     }
     val RCAT_ICON: Icon by lazy {
         val loadFile = FileUtil.loadFile("/resources/rcat.png")
-        ImageIcon(ImageIcon(loadFile.toUrl()).image.getScaledInstance(imageSize, imageSize, Image.SCALE_DEFAULT))
+        ImageIcon(
+            ImageIcon(loadFile.toURI().toURL())
+                .image
+                .getScaledInstance(
+                    imageSize,
+                    imageSize,
+                    Image.SCALE_DEFAULT
+                )
+        )
     }
 }
 

@@ -35,8 +35,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/information")
-@Api(value = "mass production data service")
+@RequestMapping("/$!tool.decapitalize($!{className})")
+@Api(value = todo)
 public class $!{className} implements PMMSController {
 
 

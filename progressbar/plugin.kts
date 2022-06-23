@@ -167,7 +167,7 @@ class NyanProgressBarUi : BasicProgressBarUI() {
 
 object FileUtil {
     fun loadFile(fileName: String): File {
-        return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins") + fileName)
+        return File(File(this.javaClass.getResource("").file).parentFile.parent + "/live-plugins" + "/progressbar" + fileName)
     }
 }
 

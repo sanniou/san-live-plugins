@@ -299,6 +299,8 @@ object NameUtils {
     fun capitalize(name: String) = name.capitalize()
 
     fun decapitalize(name: String) = name.decapitalize()
+    
+    fun controllerApiName(name: String) = name.decapitalize().replace("Controller", "").replace("Relation", "")
 
     fun match(name: String, regex: String) = regex.toRegex().matches(name)
 

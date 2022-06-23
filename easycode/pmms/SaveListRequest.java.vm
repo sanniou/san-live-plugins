@@ -20,13 +20,13 @@ public class Save$!{fileClass.name}ListRequest extends BasePmmsDataRequest {
 
     @NotEmpty
     @Valid
-    private List<$!{fileClass.name}Data> dataList;
+    private List<$!{fileClass.name}DTO> dataList;
 
     @NotNull
     private Boolean ignoreNull;
 
     @Data
-    public static class $!{fileClass.name}Data {
+    public static class $!{fileClass.name}DTO {
 
         #foreach($column in $fileClass.allFields)
             #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})

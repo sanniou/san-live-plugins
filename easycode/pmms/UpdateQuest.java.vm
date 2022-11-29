@@ -1,0 +1,38 @@
+$!setting.setFileName($tool.append("Update",$fileClass.name, "Request.java"))
+
+#set($dataName = $!{tool.decapitalize($!{fileClass.name})})
+#set($entityName = $!{fileClass.name})
+
+package $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
+    "request",".",$tool.packageName($fileClass.name));
+
+    #foreach($column in $file.importList.allImportStatements)
+        ${column.text}
+    #end
+import ${fileClass.qualifiedName};
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+
+import java.util.List;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
+import com.onestep.pmms.model.message.InterfacePmmsDataRequest;
+import com.onestep.pmms.model.message.InterfacePmmsRequest;
+
+import javax.validation.constraints.NotNull;
+
+import lombok.Data;
+
+@Data
+public class Update$!{entityName}Request extends BasePmmsDataRequest {
+
+    @NotNull
+    private Save$!{entityName}ListRequest.$!{entityName}DTO  $!{dataName}DTO;
+
+    @NotNull
+    private Fetch$!{entityName}Condition $!{dataName}Condition;
+
+
+}

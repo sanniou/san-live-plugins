@@ -299,10 +299,18 @@ object NameUtils {
     fun capitalize(name: String) = name.capitalize()
 
     fun decapitalize(name: String) = name.decapitalize()
-    
+
+    fun uppercase(name: String) = name.uppercase()
+
+    fun lowercase(name: String) = name.lowercase()
+
+    fun packageName(name: String) = name.lowercase().replace("relation", "")
+
     fun controllerApiName(name: String) = name.decapitalize().replace("Controller", "").replace("Relation", "")
 
     fun match(name: String, regex: String) = regex.toRegex().matches(name)
+
+    fun contains(str: String, text: CharSequence) = str.contains(text)
 
     fun hump2Underline(str: String): String {
         if (str.isEmpty()) {

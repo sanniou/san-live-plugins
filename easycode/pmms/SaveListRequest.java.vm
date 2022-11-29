@@ -1,9 +1,13 @@
 $!setting.setFileName($tool.append("Save",$fileClass.name, "ListRequest.java"))
 
-package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}request;
-#foreach($column in $file.importList.allImportStatements)
-    ${column.text}
-#end
+#set($entityName = $!{fileClass.name})
+
+package $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
+    "request",".",$tool.packageName($fileClass.name));
+
+    #foreach($column in $file.importList.allImportStatements)
+        ${column.text}
+    #end
 import ${fileClass.qualifiedName};
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.onestep.pmms.model.message.BasePmmsDataRequest;
@@ -16,17 +20,17 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class Save$!{fileClass.name}ListRequest extends BasePmmsDataRequest {
+public class Save$!{entityName}ListRequest extends BasePmmsDataRequest {
 
     @NotEmpty
     @Valid
-    private List<$!{fileClass.name}DTO> dataList;
+    private List<$!{entityName}DTO> dataList;
 
     @NotNull
     private Boolean ignoreNull;
 
     @Data
-    public static class $!{fileClass.name}DTO {
+    public static class $!{entityName}DTO {
 
         #foreach($column in $fileClass.allFields)
             #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})

@@ -1,5 +1,7 @@
 ##定义初始变量
 #set($className = $tool.append($fileClass.name, "Service"))
+#set($entityName = $!{fileClass.name})
+
 $!setting.setFileName($tool.append($fileClass.name, "Service.java"))
 
 ##拿到主键
@@ -15,9 +17,8 @@ package ${basePackage}.service;
 
 
 import $!{basePackage}.model.request.DeleteDataRequest;
-import $!{basePackage}.model.entity.$!{fileClass.name};
-import $!{basePackage}.model.request.Fetch$!{fileClass.name}ListRequest;
-import $!{basePackage}.model.request.Save$!{fileClass.name}ListRequest;
+import $!{basePackage}.model.entity.$!{entityName};
+import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
 import $!{basePackage}.model.response.SaveAllResponse;
 import $!{basePackage}.model.response.TotalResponse;
 import javax.annotation.Resource;
@@ -25,9 +26,16 @@ import java.util.List;
 
 public interface $!{className}{
 
-        SaveAllResponse save$!{fileClass.name}List(Save$!{fileClass.name}ListRequest request);
+        SaveAllResponse save$!{entityName}List(Save$!{entityName}ListRequest request);
 
-        TotalResponse<$!{fileClass.name}> fetch$!{fileClass.name}List(Fetch$!{fileClass.name}ListRequest request);
+        TotalResponse<$!{entityName}> fetch$!{entityName}List(Fetch$!{entityName}ListRequest request);
 
-        void delete$!{fileClass.name}(DeleteDataRequest request);
+        TotalResponse fetch$!{entityName}GroupFiledList(Fetch$!{entityName}GroupFiledRequest request);
+
+        void delete$!{entityName}(DeleteDataRequest request);
+
+        Long delete$!{entityName}ByQuery(Delete$!{entityName}Request request);
+
+        Long update$!{entityName}ByQuery(Update$!{entityName}Request request);
+
         }

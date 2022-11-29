@@ -1,0 +1,27 @@
+$!setting.setFileName($tool.append("Fetch",$fileClass.name, "GroupFiledRequest.java"))
+
+package $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
+    "request",".",$tool.packageName($fileClass.name));
+    #foreach($column in $file.importList.allImportStatements)
+        ${column.text}
+    #end
+import ${fileClass.qualifiedName};
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+
+import java.util.List;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+
+import lombok.Data;
+
+@Data
+public class Fetch$!{fileClass.name}GroupFiledRequest extends Fetch$!{fileClass.name}ListRequest {
+
+    @NotEmpty
+    private String fieldName;
+
+    @NotNull
+    private Boolean groupByField;
+}

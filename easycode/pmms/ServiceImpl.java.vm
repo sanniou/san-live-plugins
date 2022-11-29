@@ -1,6 +1,8 @@
 ##ServiceImpl
 ##定义初始变量
 #set($className = $tool.append($fileClass.name, "ServiceImpl"))
+#set($entityName = $!{fileClass.name})
+
 ##设置回调
 
 $!setting.setFileName($tool.append($fileClass.name, "ServiceImpl.java"))
@@ -14,28 +16,35 @@ $!setting.setFileName($tool.append($fileClass.name, "ServiceImpl.java"))
 
 
 #set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
-#set($dataName = $!{tool.decapitalize($!{fileClass.name})})
+#set($dataName = $!{tool.decapitalize($!{entityName})})
 
 package ${basePackage}.service.impl;
 
-import $!{basePackage}.model.entity.Q$!{fileClass.name};
-import $!{basePackage}.model.entity.$!{fileClass.name};
-import $!{basePackage}.dao.$!{fileClass.name}Dao;
-import $!{basePackage}.service.$!{fileClass.name}Service;
+import $!{basePackage}.model.entity.Q$!{entityName};
+import $!{basePackage}.model.entity.$!{entityName};
+import $!{basePackage}.dao.$!{entityName}Dao;
+import $!{basePackage}.service.$!{entityName}Service;
 import org.springframework.stereotype.Service;
 import $!{basePackage}.model.response.SaveAllResponse;
 import $!{basePackage}.model.response.TotalResponse;
 import $!{basePackage}.model.response.SaveResponse;
 import $!{basePackage}.model.request.DeleteDataRequest;
 import $!{basePackage}.model.request.FetchDataRequest;
-import $!{basePackage}.model.request.Fetch$!{fileClass.name}ListRequest;
-import $!{basePackage}.model.request.Save$!{fileClass.name}ListRequest;
+import com.querydsl.core.types.dsl.SimpleExpression;
+import com.querydsl.jpa.impl.JPAUpdateClause;
+import org.springframework.util.ReflectionUtils;
+
+import java.lang.reflect.Field;
+import com.onestep.os.model.exception.ValidationException;
+
+import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import com.onestep.pmms.utils.ExceptionGenerator;
 
 import javax.persistence.EntityManager;
+
 import com.querydsl.core.types.OrderSpecifier;
 
 import com.onestep.pmms.utils.UUIDUtils;
@@ -45,8 +54,11 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.onestep.pmms.model.BaseEntity;
 
 import org.springframework.util.ObjectUtils;
+
 import java.util.stream.Collectors;
+
 import com.querydsl.jpa.impl.JPAQuery;
+
 import java.util.ArrayList;
 
 import javax.persistence.PersistenceContext;
@@ -54,31 +66,32 @@ import javax.annotation.Resource;
 import java.util.List;
 
 @Service
-public class $!{className} implements $!{fileClass.name}Service{
+public class $!{className} implements $!{entityName}Service{
 
 @Autowired
-private $!{fileClass.name}Dao $!tool.decapitalize($!{fileClass.name})Dao;
+private $!{entityName}Dao $!{dataName}Dao;
 
 @PersistenceContext
 private EntityManager entityManager;
 
 @Override
-public SaveAllResponse save$!{fileClass.name}List(Save$!{fileClass.name}ListRequest request){
-final List<$!{fileClass.name}> itemList=request.getDataList()
+@Transactional(rollbackFor = Exception.class)
+public SaveAllResponse save$!{entityName}List(Save$!{entityName}ListRequest request){
+final List<$!{entityName}> itemList=request.getDataList()
         .stream()
         .map(item->{
-final $!{fileClass.name} $!{dataName};
+final $!{entityName} $!{dataName};
         if(!StringUtils.isEmpty(item.getId())){
             $!{dataName} = $!{dataName}Dao.findById(item.getId())
-                .orElseThrow(()->ExceptionGenerator.sourceNotFound($!{fileClass.name}.class,"id",JsonUtils.writeJson(item)));
+                .orElseThrow(()->ExceptionGenerator.sourceNotFound($!{entityName}.class,"id",JsonUtils.writeJson(item)));
         }else{
-    $!{dataName} =new $!{fileClass.name}();
+    $!{dataName} =new $!{entityName}();
     $!{dataName}.setId(UUIDUtils.getId());
     $!{dataName}.setCreateBy(request.getUserId());
         }
 
     #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
+        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")}&&!${column.name.equals("id")})
                 if(!request.getIgnoreNull()||item.get$!tool.capitalize(${column.name})()!=null){
             $!{dataName}.set$!tool.capitalize(${column.name})(item.get$!tool.capitalize(${column.name})());
                 }
@@ -101,23 +114,30 @@ final $!{fileClass.name} $!{dataName};
         }
 
 
-@Override
-public TotalResponse<$!{fileClass.name}> fetch$!{fileClass.name}List(Fetch$!{fileClass.name}ListRequest request){
-final Q$!{fileClass.name} $!{dataName}=Q$!{fileClass.name}.$!{dataName};
+private List<BooleanExpression> build$!{entityName}Query(Fetch$!{entityName}ConditionInterface request){
+final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=new ArrayList<>();
 
-#foreach($column in $fileClass.allFields)
-    #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-            if(!ObjectUtils.isEmpty(request.get$!tool.capitalize(${column.name})())){
-            expressionList.add($!{dataName}.${column.name}.in(request.get$!tool.capitalize(${column.name})()));
-            }
+    #foreach($column in $fileClass.allFields)
+        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
+                if(!ObjectUtils.isEmpty(request.get$!tool.capitalize(${column.name})())){
+                expressionList.add($!{dataName}.${column.name}.in(request.get$!tool.capitalize(${column.name})()));
+                }
+        #end
     #end
-#end
 
+        return expressionList;
+        }
 
-        //===== order ===============
-        final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
+@Override
+public TotalResponse<$!{entityName}> fetch$!{entityName}List(Fetch$!{entityName}ListRequest request){
+final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
+
+final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
+
+    //===== order ===============
+final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
         case ASC:
@@ -129,7 +149,7 @@ final List<BooleanExpression> expressionList=new ArrayList<>();
         }
 
 
-final JPAQuery<$!{fileClass.name}> jpaQuery=new JPAQuery<>(entityManager)
+final JPAQuery<$!{entityName}> jpaQuery=new JPAQuery<>(entityManager)
         .select($!{dataName})
         .from($!{dataName})
         .where(expressionList.toArray(new BooleanExpression[0]))
@@ -140,9 +160,92 @@ final JPAQuery<$!{fileClass.name}> jpaQuery=new JPAQuery<>(entityManager)
 
 
 @Override
+public TotalResponse fetch$!{entityName}GroupFiledList(Fetch$!{entityName}GroupFiledRequest request){
+final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
+
+final String fieldName=request.getFieldName();
+final Field field=ReflectionUtils.findField(Q$!{entityName}.class,fieldName);
+        if(field==null){
+        throw new IllegalArgumentException("fieldName is not exist");
+        }
+final SimpleExpression<?> fieldExpression=(SimpleExpression)ReflectionUtils.getField(field, $!{dataName});
+
+
+final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
+        expressionList.add(fieldExpression.isNotNull());
+
+    //===== order ===============
+final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
+        if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
+        switch(request.getOrderByUpdateAt()){
+        case ASC:
+        orderSpecifiers.add($!{dataName}.updateAt.asc());
+        break;
+        case DESC:
+        orderSpecifiers.add($!{dataName}.updateAt.desc());
+        }
+        }
+
+        JPAQuery<?> jpaQuery = new JPAQuery<>(entityManager)
+        .select(fieldExpression)
+        .from($!{dataName})
+        .where(expressionList.toArray(new BooleanExpression[0]));
+        if (request.getGroupByField()) {
+            jpaQuery = jpaQuery.groupBy(fieldExpression);
+        }
+        jpaQuery = jpaQuery.orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]));
+        return FetchDataRequest.handlePageResult(request,jpaQuery);
+        }
+
+@Override
 @Transactional(rollbackFor = Exception.class)
-public void delete$!{fileClass.name}(DeleteDataRequest request){
-    $!{tool.decapitalize($!{fileClass.name})}Dao.softDelete(System.currentTimeMillis(),request.getUserId(),request.getId());
+public void delete$!{entityName}(DeleteDataRequest request){
+    $!{dataName}Dao.softDelete(System.currentTimeMillis(),request.getUserId(),request.getId());
+        }
+
+@Override
+@Transactional(rollbackFor = Exception.class)
+public Long delete$!{entityName}ByQuery(Delete$!{entityName}Request request){
+
+final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
+
+final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
+
+        return new JPAUpdateClause(entityManager, $!{dataName})
+        .set($!{dataName}.deleteAt,System.currentTimeMillis())
+        .set($!{dataName}.deleteBy,request.getUserId())
+        .where(expressionList.toArray(new BooleanExpression[0]))
+        .execute();
+        }
+
+
+@Override
+@Transactional(rollbackFor = Exception.class)
+public Long update$!{entityName}ByQuery(Update$!{entityName}Request request){
+        // fixme 这里必须校验一个主键或者关联键，防止误伤全量数据
+        if (ObjectUtils.isEmpty(request.get$!{entityName}Condition().getXXId())
+        && ObjectUtils.isEmpty(request.get$!{entityName}Condition().getId())
+        ) {
+        throw new ValidationException("Dose not work when condition id or XXId is empty");
+        }
+
+final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
+
+final List<BooleanExpression> expressionList=build$!{entityName}Query(request.get$!{entityName}Condition());
+
+        JPAUpdateClause updateQuery=new JPAUpdateClause(entityManager, $!{dataName});
+    #foreach($column in $fileClass.allFields)
+        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
+                if(request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})()!=null){
+                updateQuery=updateQuery.set($!{dataName}.${column.name},request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})());
+                }
+        #end
+    #end
+        return updateQuery
+        .set($!{dataName}.updateAt,System.currentTimeMillis())
+        .set($!{dataName}.updateBy,request.getUserId())
+        .where(expressionList.toArray(new BooleanExpression[0]))
+        .execute();
         }
 
         }

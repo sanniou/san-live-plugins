@@ -62,8 +62,8 @@ if (Env.startup || !isIdeStartup) {
             extensionPoint.unregisterExtension(it)
         }
 
-    extensionPoint.registerExtension(VersionCheckFactory())
-    show("register VersionCheck success")
+//    extensionPoint.registerExtension(VersionCheckFactory())
+//    show("register VersionCheck success")
 }
 
 

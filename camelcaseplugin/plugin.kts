@@ -43,7 +43,10 @@ object Env {
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str\n", ConsoleViewContentType.LOG_INFO_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
+            ConsoleViewContentType.LOG_INFO_OUTPUT
+        )
     }
 }
 
@@ -77,7 +80,7 @@ class CamelCaseEditorActionHandler<T> : EditorActionHandler(true) {
         val project = editor.project!!
         val config = CamelCaseConfig()
         var text = editor.selectionModel.selectedText
-        if (text == null || text.isEmpty()) {
+        if (text.isNullOrEmpty()) {
             editor.selectionModel.selectWordAtCaret(true)
             var moveLeft = true
             var moveRight = true
@@ -108,26 +111,27 @@ class CamelCaseEditorActionHandler<T> : EditorActionHandler(true) {
                 }
             }
             editor.selectionModel.setSelection(start, end)
-            text = editor.selectionModel.selectedText
+            text = editor.selectionModel.selectedText!!
         }
         val newText: String
-        text!!
         if (config.cb1State || config.cb2State || config.cb3State || config.cb4State || config.cb5State || config.cb6State) {
-            newText = Conversion.transform(text,
-                    config.cb6State,  // space case
-                    config.cb1State,  // kebab case
-                    config.cb2State,  // upper snake case
-                    config.cb3State,  // pascal case
-                    config.cb4State,  // camel case
-                    config.cb5State,  // lower snake case
-                    config.model)
+            newText = Conversion.transform(
+                text,
+                config.cb6State,  // space case
+                config.cb1State,  // kebab case
+                config.cb2State,  // upper snake case
+                config.cb3State,  // pascal case
+                config.cb4State,  // camel case
+                config.cb5State,  // lower snake case
+                config.model
+            )
             val runnable = Runnable { replaceText(editor, newText) }
             ApplicationManager.getApplication().runWriteAction(getRunnableWrapper(project, runnable))
         }
         return continueExecution()
     }
 
-    fun replaceText(editor: Editor, replacement: String) {
+    private fun replaceText(editor: Editor, replacement: String) {
         try {
             WriteAction.run(ThrowableRunnable<Throwable> {
                 val start = editor.selectionModel.selectionStart
@@ -144,7 +148,9 @@ class CamelCaseEditorActionHandler<T> : EditorActionHandler(true) {
     }
 
     private fun getRunnableWrapper(project: Project, runnable: Runnable): Runnable {
-        return Runnable { CommandProcessor.getInstance().executeCommand(project, runnable, "CamelCase", ActionGroup.EMPTY_GROUP) }
+        return Runnable {
+            CommandProcessor.getInstance().executeCommand(project, runnable, "CamelCase", ActionGroup.EMPTY_GROUP)
+        }
     }
 
 }
@@ -158,12 +164,13 @@ class CamelCaseConfig {
     var cb5State = true
     var cb6State = true
     var model = arrayOf(
-            "kebab-case",
-            "SNAKE_CASE",
-            "CamelCase",
-            "camelCase",
-            "snake_case",
-            "space case")
+        "kebab-case",
+        "SNAKE_CASE",
+        "CamelCase",
+        "camelCase",
+        "snake_case",
+        "space case"
+    )
 
 
 }
@@ -179,15 +186,17 @@ object Conversion {
     private const val CONVERSION_LOWER_SNAKE_CASE = "snake_case"
 
     @NotNull
-    fun transform(text: String,
-                  useSpaceCase: Boolean,
-                  useKebabCase: Boolean,
-                  useUpperSnakeCase: Boolean,
-                  usePascalCase: Boolean,
-                  useCamelCase: Boolean,
-                  useLowerSnakeCase: Boolean,
-                  conversionList: Array<String>): String {
-        var text = text
+    fun transform(
+        textIn: String,
+        useSpaceCase: Boolean,
+        useKebabCase: Boolean,
+        useUpperSnakeCase: Boolean,
+        usePascalCase: Boolean,
+        useCamelCase: Boolean,
+        useLowerSnakeCase: Boolean,
+        conversionList: Array<String>
+    ): String {
+        var text = textIn
         var newText: String
         var appendText = ""
         var repeat: Boolean
@@ -202,8 +211,8 @@ object Conversion {
         text = text.replace("^\\W+".toRegex(), "")
         do {
             newText = text
-            val isLowerCase = text == text.toLowerCase()
-            val isUpperCase = text == text.toUpperCase()
+            val isLowerCase = text == text.lowercase()
+            val isUpperCase = text == text.uppercase()
             if (isLowerCase && text.contains("_")) {
                 // snake_case to space case
                 if (next == null) {
@@ -260,7 +269,9 @@ object Conversion {
                         repeat = true
                     }
                 }
-            } else if (!isUpperCase && text.substring(0, 1) == text.substring(0, 1).toUpperCase() && !text.contains("_")) {
+            } else if (!isUpperCase && text.substring(0, 1) == text.substring(0, 1)
+                    .toUpperCase() && !text.contains("_")
+            ) {
                 // PascalCase to camelCase
                 if (next == null) {
                     next = getNext(CONVERSION_PASCAL_CASE, conversionList)

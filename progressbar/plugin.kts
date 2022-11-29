@@ -1,4 +1,5 @@
 import com.intellij.ide.ui.LafManager
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.GraphicsUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -121,9 +122,9 @@ class NyanProgressBarUi : BasicProgressBarUI() {
                 2f * off,
                 2f * off,
                 if (full) w.toFloat() else amountFull - JBUI.scale(5f),
-                h - JBUI.scale(5f),
-                JBUI.scale(7f),
-                JBUI.scale(7f)
+                h - JBUIScale.scale(5f),
+                JBUIScale.scale(7f),
+                JBUIScale.scale(7f)
             )
         )
         // diff 2
@@ -173,7 +174,7 @@ object FileUtil {
 
 object NyanIcons {
 
-    const val imageSize = 36
+    const val imageSize = 52
 
     val CAT_ICON: Icon by lazy {
         val loadFile = FileUtil.loadFile("/resources/cat.png")

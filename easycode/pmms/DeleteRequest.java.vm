@@ -1,0 +1,33 @@
+$!setting.setFileName($tool.append("Delete",$fileClass.name, "Request.java"))
+
+package $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
+    "request",".",$tool.packageName($fileClass.name));
+    #foreach($column in $file.importList.allImportStatements)
+        ${column.text}
+    #end
+import ${fileClass.qualifiedName};
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+
+import java.util.List;
+import javax.validation.Valid;
+import javax.validation.constraints.NotEmpty;
+import com.onestep.pmms.model.message.InterfacePmmsDataRequest;
+import com.onestep.pmms.model.message.InterfacePmmsRequest;
+import javax.validation.constraints.NotNull;
+
+import lombok.Data;
+
+@Data
+public class Delete$!{fileClass.name}Request extends Fetch$!{fileClass.name}Condition  implements InterfacePmmsDataRequest,InterfacePmmsRequest  {
+
+    private Long timestamp;
+
+    private String apiVersion;
+
+    private String requestId;
+
+    private String userId;
+
+
+}

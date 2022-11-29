@@ -5,13 +5,13 @@ import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.impl.source.PsiClassReferenceType
 import com.intellij.psi.util.PsiTypesUtil
 import liveplugin.PluginUtil
+import liveplugin.executeCommand
 import liveplugin.show
 import java.text.DateFormat
 import java.util.*
@@ -34,6 +34,7 @@ object Env {
         }
     }
 
+
     fun ConsoleView.println(str: Any?) {
         this.print(
             "${DateFormat.getDateTimeInstance().format(Date())} : $str\n",
@@ -48,6 +49,7 @@ if (Env.startup || !isIdeStartup) {
     val actionsClasses =
         arrayOf(
             GenerateSetAction::class.java,
+            GenerateAccessorsBuildAction::class.java,
             GenerateSetWithParamAction::class.java,
             GenerateBuilderAction::class.java,
             GenerateSetWithDefaultAction::class.java,
@@ -103,6 +105,12 @@ class GenerateReturnSetAction : BaseGenerateSetAction() {
         }
     }
 
+    override fun afterSetter(parameterName: String, offset: Int, editor: Editor, psiType: PsiType): String {
+        return "return $parameterName;".also {
+            editor.document.insertString(offset, it)
+        }
+    }
+
 }
 
 
@@ -115,9 +123,11 @@ open class GenerateSetAction : BaseGenerateSetAction() {
             is PsiVariable -> {
                 true
             }
+
             is PsiReferenceExpression -> {
                 true
             }
+
             else -> {
                 false
             }
@@ -132,9 +142,11 @@ open class GenerateSetAction : BaseGenerateSetAction() {
             is PsiVariable -> {
                 context.type
             }
+
             is PsiReferenceExpression -> {
                 context.type!!
             }
+
             else -> {
                 show("error with offsetElement $psiElement context $context")
                 return
@@ -155,6 +167,7 @@ open class GenerateBuilderAction : BaseGenerateSetAction() {
             is PsiReferenceExpression -> {
                 context.text.endsWith("builder")
             }
+
             else -> {
                 false
             }
@@ -169,6 +182,7 @@ open class GenerateBuilderAction : BaseGenerateSetAction() {
             is PsiReferenceExpression -> {
                 PsiTypesUtil.getClassType(PsiTypesUtil.getPsiClass(context.type)!!.containingClass!!)
             }
+
             else -> {
                 show("error with offsetElement $psiElement context $context")
                 return
@@ -177,6 +191,55 @@ open class GenerateBuilderAction : BaseGenerateSetAction() {
 
         insertSetter(psiType, editor, project, psiElement)
     }
+
+    override fun getSetterMethodStr(elementName: String, method: PsiMethod) =
+        "\n.${method.name.substring(3).decapitalize()}(null)"
+}
+
+open class GenerateAccessorsBuildAction : BaseGenerateSetAction() {
+    override fun getText() = "GenerateAccessorsBuild"
+
+    override fun isAvailable(project1: Project, editor: Editor?, psiElement: PsiElement): Boolean {
+        Env.println("$this + isAvailable111:${psiElement}")
+        Env.println("$this + isAvailable:${psiElement.context}")
+        Env.println("$this + isAvailable:${psiElement.context?.context}")
+        return when (psiElement.context) {
+            is PsiNewExpression -> {
+                true
+            }
+
+            is PsiJavaCodeReferenceElement -> {
+                (psiElement.context as PsiJavaCodeReferenceElement).context is PsiNewExpression
+            }
+
+            else -> {
+                false
+            }
+        }
+    }
+
+
+    override fun invoke(project: Project, editor: Editor?, psiElement: PsiElement) {
+        Env.println("$this+invoke")
+        editor ?: return
+        val psiType = when (val context = psiElement.context) {
+            is PsiNewExpression -> {
+                context.type!!
+            }
+
+            is PsiJavaCodeReferenceElement -> {
+                (context.context as PsiNewExpression).type!!
+            }
+
+            else -> {
+                show("error with offsetElement $psiElement context $context")
+                return
+            }
+        }
+
+        insertSetter(psiType, editor, project, psiElement)
+    }
+
 
     override fun getSetterMethodStr(elementName: String, method: PsiMethod) =
         "\n.${method.name.substring(3).decapitalize()}(null)"
@@ -328,7 +391,7 @@ abstract class BaseGenerateSetAction : PsiElementBaseIntentionAction() {
         val psiFile = psiElement.containingFile
 
         PsiTypesUtil.getPsiClass(psiType)?.let { offsetClassElement ->
-            WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.executeCommand(project, description = "Insert Hello World") {
                 Env.println("$parameterName")
                 val currentLine = editor.caretModel.logicalPosition.line
                 val lineEndOffset = editor.document.getLineEndOffset(currentLine)

@@ -2,7 +2,6 @@ import com.google.common.base.CaseFormat
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
@@ -14,6 +13,7 @@ import com.intellij.refactoring.suggested.startOffset
 import com.jetbrains.rd.util.string.printToString
 import liveplugin.PluginUtil
 import liveplugin.currentEditor
+import liveplugin.executeCommand
 import liveplugin.show
 import java.text.DateFormat
 import java.util.*
@@ -182,7 +182,7 @@ class FoldRightProfileAction : AnAction("FoldRightProfile") {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        editor.document.executeCommand(project, description = "Insert Hello World") {
             Env.println("psiFile : $psiFile")
             psiFile.classes.forEach { psiClass ->
                 Env.println("psiClass : $psiClass")
@@ -212,11 +212,11 @@ class CopyParentProfileAction : AnAction("CopyParentProfile") {
             ?: (event.getData(LangDataKeys.PSI_FILE) as? PsiJavaFile) ?: return
         Env.println("psiElement = $psiElement")
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        project.currentEditor?.document?.executeCommand(project, description = "Insert Hello World") {
             val psiClasses = when (psiElement) {
                 is PsiJavaFile -> psiElement.classes
                 is PsiClass -> arrayOf(psiElement)
-                else -> return@runWriteCommandAction;
+                else -> return@executeCommand
             }
             psiClasses.forEach { psiClass ->
                 Env.println("psiClass : $psiClass")
@@ -266,7 +266,7 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        editor.document.executeCommand(project, description = "Insert Hello World") {
             val offset = Wrapper(0);
             psiFile.classes.forEach { psiClass ->
                 handleClass(editor.document, offset, psiClass)
@@ -286,6 +286,7 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
                 is PsiClass -> {
                     handleClass(document, offset, it)
                 }
+
                 is com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl -> {
                     val nextSibling = it.nextSibling
                     if (nextSibling is PsiField) {
@@ -315,7 +316,7 @@ open class AddJpaColumnAction : AnAction("AddJpaColumnAction") {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        editor.document.executeCommand(project, description = "Insert Hello World") {
 
             val offset = Wrapper(0)
             psiFile.classes.forEach { psiClass ->
@@ -343,6 +344,7 @@ open class AddJpaColumnAction : AnAction("AddJpaColumnAction") {
                 is PsiClass -> {
                     handleClass(document, offset, it)
                 }
+
                 is PsiField -> {
                     handleField(document, offset, it)
                 }
@@ -382,7 +384,7 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
             return
         }
 
-        WriteCommandAction.runWriteCommandAction(project) {
+        editor.document.executeCommand(project, description = "Insert Hello World") {
 
             val offset = Wrapper(0)
             psiFile.classes.forEach { psiClass ->
@@ -410,6 +412,7 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
                 is PsiClass -> {
                     handleClass(document, offset, it)
                 }
+
                 is PsiField -> {
                     handleField(document, offset, it)
                 }

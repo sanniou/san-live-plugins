@@ -1,9 +1,7 @@
-$!setting.setFileName($tool.append("Fetch",$fileClass.name, "ListRequest.java"))
+$!setting.setFileName($tool.append("Fetch",$fileClass.name, "Condition.java"))
 
-#set($entityName = $!{fileClass.name})
 package $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
     "request",".",$tool.packageName($fileClass.name));
-
     #foreach($column in $file.importList.allImportStatements)
         ${column.text}
     #end
@@ -13,9 +11,6 @@ import com.onestep.pmms.model.message.BasePmmsDataRequest;
 
 import java.util.List;
 import java.util.Collection;
-
-import $tool.append($file.packageName.substring(0,${file.packageName.indexOf("entity")}),
-        "request",".","FetchDataRequest");
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -23,7 +18,7 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class Fetch$!{entityName}ListRequest extends FetchDataRequest implements Fetch$!{entityName}ConditionInterface {
+public class Fetch$!{fileClass.name}Condition implements Fetch$!{fileClass.name}ConditionInterface {
 
     #foreach($column in $fileClass.allFields)
         #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})

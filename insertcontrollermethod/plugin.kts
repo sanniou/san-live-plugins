@@ -2,16 +2,15 @@ import com.intellij.codeInsight.intention.IntentionManager
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTypesUtil
-import com.intellij.psi.util.PsiUtil
 import com.intellij.refactoring.suggested.startOffset
 import liveplugin.PluginUtil
+import liveplugin.executeCommand
 import liveplugin.show
 import java.text.DateFormat
 import java.util.*
@@ -97,26 +96,31 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         editor ?: return
         val psiClass = psiElement.getContainingClass()!!
         var contentLength = 0
-        Env.println("psiClass$psiClass")
-        Env.println("psiElement$psiElement")
-        Env.println("psiElement size${psiClass.allFields.size}")
+        Env.println("psiClass = $psiClass")
+        Env.println("psiElement = $psiElement")
+        Env.println("psiElement size = ${psiClass.allFields.size}")
         psiClass.allFields.filter { it.name.endsWith("Service") || it.name.endsWith("service") }
             .forEach { serviceField ->
-                Env.println("psiField$serviceField")
+                Env.println("psiField = $serviceField")
                 PsiTypesUtil.getPsiClass(serviceField.type)
                     ?.methods
                     ?.forEach { method ->
-                        Env.println("methods$method")
+                        Env.println("methods = $method")
+                        method.docComment.run {
+                            Env.println("methods docComment = ${this?.text}")
+                            if (this == null || !text.contains("not in controller")) Unit else null
+                        } ?: return@forEach
+
                         psiClass.methods.firstOrNull { psiMethod -> psiMethod.name == method.name }
                             ?: run {
-                                Env.println("insertMethod=$method")
+                                Env.println("insertMethod = $method")
                                 contentLength += insertMethod(psiElement, method, serviceField.name, editor, project)
                             }
                     }
             }
         // fixme not work
         try {
-            WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.executeCommand(project, description = "Insert Hello World") {
                 val psiFile = psiElement.containingFile
                 psiFile.commitAndUnblockDocument()
                 psiFile.reformatCodeRange(psiElement.startOffset, psiElement.startOffset + contentLength)
@@ -195,7 +199,7 @@ class InsertControllerMethodAction : PsiElementBaseIntentionAction() {
         return ${tryMethodName}(request, () -> $serviceName.${method.name}(request));
     }
         """.trimIndent().apply { contentLength = this.length }
-        WriteCommandAction.runWriteCommandAction(project) {
+        editor.document.executeCommand(project, description = "Insert Hello World") {
             editor.document.insertString(psiElement.startOffset, methodContent)
         }
         return contentLength

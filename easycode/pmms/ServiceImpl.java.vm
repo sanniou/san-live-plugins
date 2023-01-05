@@ -33,8 +33,11 @@ import $!{basePackage}.model.request.FetchDataRequest;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.jpa.impl.JPAUpdateClause;
 import org.springframework.util.ReflectionUtils;
+import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
+
 
 import java.lang.reflect.Field;
+
 import com.onestep.os.model.exception.ValidationException;
 
 import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
@@ -91,7 +94,8 @@ final $!{entityName} $!{dataName};
         }
 
     #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")}&&!${column.name.equals("id")})
+        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty(
+            "static")}&&!${column.name.equals("id")})
                 if(!request.getIgnoreNull()||item.get$!tool.capitalize(${column.name})()!=null){
             $!{dataName}.set$!tool.capitalize(${column.name})(item.get$!tool.capitalize(${column.name})());
                 }
@@ -136,7 +140,7 @@ final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
 
-    //===== order ===============
+        //===== order ===============
 final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
@@ -174,7 +178,7 @@ final SimpleExpression<?> fieldExpression=(SimpleExpression)ReflectionUtils.getF
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
         expressionList.add(fieldExpression.isNotNull());
 
-    //===== order ===============
+        //===== order ===============
 final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
@@ -186,14 +190,14 @@ final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         }
         }
 
-        JPAQuery<?> jpaQuery = new JPAQuery<>(entityManager)
+        JPAQuery<?> jpaQuery=new JPAQuery<>(entityManager)
         .select(fieldExpression)
         .from($!{dataName})
         .where(expressionList.toArray(new BooleanExpression[0]));
-        if (request.getGroupByField()) {
-            jpaQuery = jpaQuery.groupBy(fieldExpression);
+        if(request.getGroupByField()){
+        jpaQuery=jpaQuery.groupBy(fieldExpression);
         }
-        jpaQuery = jpaQuery.orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]));
+        jpaQuery=jpaQuery.orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]));
         return FetchDataRequest.handlePageResult(request,jpaQuery);
         }
 
@@ -210,10 +214,14 @@ public Long delete$!{entityName}ByQuery(Delete$!{entityName}Request request){
 final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
-
+        if(ObjectUtils.isEmpty(expressionList)){
+        throw new ValidationException("Dose not work when expression is empty");
+        }
         return new JPAUpdateClause(entityManager, $!{dataName})
         .set($!{dataName}.deleteAt,System.currentTimeMillis())
         .set($!{dataName}.deleteBy,request.getUserId())
+        .set($!{dataName}.updateAt,System.currentTimeMillis())
+        .set($!{dataName}.updateBy,request.getUserId())
         .where(expressionList.toArray(new BooleanExpression[0]))
         .execute();
         }
@@ -222,16 +230,14 @@ final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
 @Override
 @Transactional(rollbackFor = Exception.class)
 public Long update$!{entityName}ByQuery(Update$!{entityName}Request request){
-        // fixme 这里必须校验一个主键或者关联键，防止误伤全量数据
-        if (ObjectUtils.isEmpty(request.get$!{entityName}Condition().getXXId())
-        && ObjectUtils.isEmpty(request.get$!{entityName}Condition().getId())
-        ) {
-        throw new ValidationException("Dose not work when condition id or XXId is empty");
-        }
-
 final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request.get$!{entityName}Condition());
+
+        if(ObjectUtils.isEmpty(expressionList)
+        ){
+        throw new ValidationException("Dose not work when expression is empty");
+        }
 
         JPAUpdateClause updateQuery=new JPAUpdateClause(entityManager, $!{dataName});
     #foreach($column in $fileClass.allFields)

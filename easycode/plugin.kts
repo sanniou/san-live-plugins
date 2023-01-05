@@ -25,6 +25,7 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.layout.selected
 import liveplugin.PluginUtil
 import liveplugin.show
 import org.apache.velocity.VelocityContext
@@ -413,7 +414,6 @@ fun findDirectory(selectedFile: PsiFile, psiFile: PsiJavaFile): PsiDirectory {
 
 fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     // 创建一行四列的主面板
-    //val mainPanel = JPanel(GridLayout(1, 4))
     val mainPanel = JPanel(FlowLayout())
 
     val listPanel = FileUtil.listDirectory()
@@ -473,21 +473,20 @@ fun isPanelSelected(vararg checkboxPanels: ListCheckboxPanel): Boolean {
     return false
 }
 
-class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(VerticalFlowLayout()) {
+class ListCheckboxPanel(title: String, private val items: List<File>) : JPanel(VerticalFlowLayout()) {
 
     /**
      * 复选框列表
      */
-    var checkBoxList: List<JBCheckBox>
+    private var checkBoxList: List<JBCheckBox>
 
     /**
      * 初始化操作
      */
     init {
-        val textPane = JTextPane()
-        textPane.isEditable = false
-        textPane.text = title
+        val textPane = JBCheckBox(title)
         add(textPane)
+        add(com.intellij.ui.components.JBLabel("-----------"))
         checkBoxList = if (items.isNotEmpty()) {
             ArrayList<JBCheckBox>(items.size)
                 .also {
@@ -501,6 +500,12 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
         } else {
             emptyList()
         }
+
+        textPane.addItemListener {
+            checkBoxList.forEach { cb ->
+                cb.isSelected = it.stateChange == java.awt.event.ItemEvent.SELECTED
+            }
+        }
     }
 
     /**
@@ -510,16 +515,11 @@ class ListCheckboxPanel(val title: String, val items: List<File>) : JPanel(Verti
      */
     val selectedItems: List<File>
         get() {
-            if (checkBoxList.isNullOrEmpty()) {
-                return emptyList()
+            return checkBoxList.filter {
+                it.isSelected
+            }.map { checkBox ->
+                items.first { it.name == checkBox.text }
             }
-            val result: MutableList<File> = ArrayList()
-            checkBoxList.forEach(Consumer { checkBox: JBCheckBox ->
-                if (checkBox.isSelected) {
-                    result.add(items.first { it.name == checkBox.text })
-                }
-            })
-            return result
         }
 
 }

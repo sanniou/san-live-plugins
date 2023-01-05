@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 public interface $!{fileClass.name}Dao extends JpaRepository<$!fileClass.name,$!pk.type.name> {
 
     @Modifying
-    @Query("update $!fileClass.name t set t.deleteAt = ?1, t.deleteBy= ?2 where t.id in ?3 ")
+    @Query("update $!fileClass.name t set t.updateAt = ?1,t.deleteAt = ?1, t.deleteBy= ?2, t.updateBy= ?2 where t.id in ?3 ")
     void softDelete(Long timestamp, String userId, List<$!pk.type.name> idList);
 
 }

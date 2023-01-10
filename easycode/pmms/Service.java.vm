@@ -1,8 +1,8 @@
 ##定义初始变量
-#set($className = $tool.append($fileClass.name, "Service"))
+#set($className = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "Service"))
 #set($entityName = $!{fileClass.name})
 
-$!setting.setFileName($tool.append($fileClass.name, "Service.java"))
+$!setting.setFileName($tool.append($className, ".java"))
 
 ##拿到主键
 #foreach($column in $fileClass.allFields)

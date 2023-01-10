@@ -1,11 +1,11 @@
 ##ServiceImpl
 ##定义初始变量
-#set($className = $tool.append($fileClass.name, "ServiceImpl"))
+#set($className = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "ServiceImpl"))
+#set($serviceName = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "Service"))
 #set($entityName = $!{fileClass.name})
 
 ##设置回调
-
-$!setting.setFileName($tool.append($fileClass.name, "ServiceImpl.java"))
+$!setting.setFileName($tool.append($className, ".java"))
 
 ##拿到主键
 #foreach($column in $fileClass.allFields)
@@ -69,7 +69,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 @Service
-public class $!{className} implements $!{entityName}Service{
+public class $!{className} implements $!{serviceName}{
 
 @Autowired
 private $!{entityName}Dao $!{dataName}Dao;
@@ -82,11 +82,11 @@ private EntityManager entityManager;
 public SaveAllResponse save$!{entityName}List(Save$!{entityName}ListRequest request){
 final List<$!{entityName}> itemList=request.getDataList()
         .stream()
-        .map(item->{
+        .map(itemDto->{
 final $!{entityName} $!{dataName};
-        if(!StringUtils.isEmpty(item.getId())){
-            $!{dataName} = $!{dataName}Dao.findById(item.getId())
-                .orElseThrow(()->ExceptionGenerator.sourceNotFound($!{entityName}.class,"id",JsonUtils.writeJson(item)));
+        if(!StringUtils.isEmpty(itemDto.getId())){
+            $!{dataName} = $!{dataName}Dao.findById(itemDto.getId())
+                .orElseThrow(()->ExceptionGenerator.sourceNotFound($!{entityName}.class,"id",JsonUtils.writeJson(itemDto)));
         }else{
     $!{dataName} =new $!{entityName}();
     $!{dataName}.setId(UUIDUtils.getId());
@@ -96,8 +96,8 @@ final $!{entityName} $!{dataName};
     #foreach($column in $fileClass.allFields)
         #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty(
             "static")}&&!${column.name.equals("id")})
-                if(!request.getIgnoreNull()||item.get$!tool.capitalize(${column.name})()!=null){
-            $!{dataName}.set$!tool.capitalize(${column.name})(item.get$!tool.capitalize(${column.name})());
+                if(!request.getIgnoreNull()||itemDto.get$!tool.capitalize(${column.name})()!=null){
+            $!{dataName}.set$!tool.capitalize(${column.name})(itemDto.get$!tool.capitalize(${column.name})());
                 }
         #end
     #end

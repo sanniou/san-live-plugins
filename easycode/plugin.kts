@@ -26,6 +26,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.layout.selected
+import com.jetbrains.rd.util.string.printToString
 import liveplugin.PluginUtil
 import liveplugin.show
 import org.apache.velocity.VelocityContext
@@ -43,7 +44,9 @@ import java.util.function.Consumer
 import java.util.regex.Pattern
 import javax.swing.AbstractAction
 import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JTextField
 import javax.swing.JTextPane
 
 
@@ -349,6 +352,8 @@ object NameUtils {
     }
 
     fun append(vararg objects: Any): String {
+        Env.println("============= apped")
+        Env.println(objects.reduce { acc, any -> "$acc : $any" })
         if (objects.isEmpty()) {
             return ""
         }
@@ -428,11 +433,22 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
             Env.println("listPanel : $this")
         }
     // 构建dialog
+    val prefixFiled = JTextField("");
+    val suffixFiled = JTextField("");
+
     Env.println("dialogBuilder : $project")
     val dialogBuilder = DialogBuilder(project)
     Env.println("dialogBuilder 2 : $dialogBuilder")
     dialogBuilder.setTitle("MsgValue.TITLE_INFO")
-    dialogBuilder.setNorthPanel(MultiLineLabel("请选择要导出的code："))
+    dialogBuilder.setNorthPanel(
+        JPanel(FlowLayout()).apply {
+            add(MultiLineLabel("请选择要导出的code："))
+            add(JLabel("Prefix: "))
+            add(prefixFiled)
+            add(JLabel("Suffix: "))
+            add(suffixFiled)
+        }
+    )
     dialogBuilder.setCenterPanel(mainPanel)
     dialogBuilder.addActionDescriptor(DialogBuilder.ActionDescriptor { dialogWrapper ->
         object : AbstractAction("OK") {
@@ -448,7 +464,7 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
 
 //                    show("generateCode selectedFiles $selectedFiles")
                     selectedFiles.forEach {
-                        createFile(psiClass, selectedFile, it)
+                        createFile(psiClass, selectedFile, it, prefixFiled.text, suffixFiled.text)
                     }
                     // 关闭并退出
                     dialogWrapper.close(DialogWrapper.OK_EXIT_CODE)
@@ -524,7 +540,13 @@ class ListCheckboxPanel(title: String, private val items: List<File>) : JPanel(V
 
 }
 
-fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
+fun createFile(
+    psiClass: PsiClass,
+    selectedFile: PsiJavaFile,
+    tempfile: File,
+    prefix: String = "",
+    suffix: String = ""
+) {
     // 获取默认参数
     val param: MutableMap<String, Any> = getDefaultParam()
     param["fileClass"] = psiClass.apply {
@@ -535,7 +557,9 @@ fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
     param["packageName"] = (psiClass.containingFile as PsiJavaFile).packageName
     param["file"] = selectedFile
     param["tool"] = NameUtils
-    val templateSetting = TemplateSetting()
+    Env.println("============suffix $suffix")
+    val templateSetting = TemplateSetting(fileName = "", fileNamePrefix = prefix, fileNameSuffix = suffix)
+    Env.println("============templateSetting $templateSetting")
     param["setting"] = templateSetting
 
 
@@ -553,4 +577,8 @@ fun createFile(psiClass: PsiClass, selectedFile: PsiJavaFile, tempfile: File) {
 //    showCode(project!!, psiFile)
 }
 
-data class TemplateSetting(var fileName: String = "")
+data class TemplateSetting(
+    var fileName: String = "",
+    var fileNamePrefix: String = "",
+    var fileNameSuffix: String = "",
+)

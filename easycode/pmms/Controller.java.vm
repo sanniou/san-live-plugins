@@ -1,8 +1,9 @@
-##定义初始变量
-#set($className = $tool.append($fileClass.name, "Controller"))
+#set($className = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "Controller"))
+#set($serviceName = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "Service"))
+#set($serviceNameField = $!tool.decapitalize($!{serviceName}))
 #set($entityName = $!{fileClass.name})
-#set($serviceName = $tool.append($!tool.decapitalize($!{fileClass.name}),"Service"))
-$!setting.setFileName($tool.append($fileClass.name, "Controller.java"))
+$!setting.setFileName($tool.append($className, ".java"))
+
 
 ##拿到主键
 #foreach($column in $fileClass.allFields)
@@ -40,50 +41,49 @@ import org.springframework.web.bind.annotation.*;
 @Api(value = todo)
 public class $!{className} implements PMMSController {
 
+@Autowired
+private $!{serviceName} $!{serviceNameField};
 
-    @Autowired
-    private $!{entityName}Service $!{serviceName};
 
+@PostMapping("/save$!{entityName}List")
+@ApiOperation(value = "save$!{entityName}List")
+public PmmsResponse<SaveAllResponse> save$!{entityName}List(
+@RequestBody @Validated Save$!{entityName}ListRequest request) {
+        return tryFunction(request, () -> $!{serviceNameField}.save$!{entityName}List(request));
+        }
 
-    @PostMapping("/save$!{entityName}List")
-    @ApiOperation(value = "save$!{entityName}List")
-    public PmmsResponse<SaveAllResponse> save$!{entityName}List(
-            @RequestBody @Validated Save$!{entityName}ListRequest request) {
-        return tryFunction(request, () -> $!{serviceName}.save$!{entityName}List(request));
-    }
+@PostMapping("/fetch$!{entityName}List")
+@ApiOperation(value = "fetch$!{entityName}List")
+public PmmsResponse<TotalResponse<$!{entityName}>> fetch$!{entityName}List(
+@RequestBody @Validated Fetch$!{entityName}ListRequest request) {
+        return tryFunction(request, () -> $!{serviceNameField}.fetch$!{entityName}List(request));
+        }
 
-    @PostMapping("/fetch$!{entityName}List")
-    @ApiOperation(value = "fetch$!{entityName}List")
-    public PmmsResponse<TotalResponse<$!{entityName}>> fetch$!{entityName}List(
-            @RequestBody @Validated Fetch$!{entityName}ListRequest request) {
-        return tryFunction(request, () -> $!{serviceName}.fetch$!{entityName}List(request));
-    }
+@PostMapping("/fetch$!{entityName}GroupFiledList")
+@ApiOperation(value = "fetch$!{entityName}GroupFiledList")
+public PmmsResponse<TotalResponse> fetch$!{entityName}GroupFiledList(
+@RequestBody @Validated Fetch$!{entityName}GroupFiledRequest request) {
+        return tryFunction(request, () -> $!{serviceNameField}.fetch$!{entityName}GroupFiledList(request));
+        }
 
-    @PostMapping("/fetch$!{entityName}GroupFiledList")
-    @ApiOperation(value = "fetch$!{entityName}GroupFiledList")
-    public PmmsResponse<TotalResponse> fetch$!{entityName}GroupFiledList(
-            @RequestBody @Validated Fetch$!{entityName}GroupFiledRequest request) {
-        return tryFunction(request, () -> $!{serviceName}.fetch$!{entityName}GroupFiledList(request));
-    }
+@PostMapping("/delete$!{entityName}")
+@ApiOperation(value = "delete$!{entityName}")
+public PmmsResponse<Void> delete$!{entityName}(
+@RequestBody @Validated DeleteDataRequest request) {
+        return tryConsumer(request, () -> $!{serviceNameField}.delete$!{entityName}(request));
+        }
 
-    @PostMapping("/delete$!{entityName}")
-    @ApiOperation(value = "delete$!{entityName}")
-    public PmmsResponse<Void> delete$!{entityName}(
-            @RequestBody @Validated DeleteDataRequest request) {
-        return tryConsumer(request, () -> $!{serviceName}.delete$!{entityName}(request));
-    }
+@PostMapping("/delete$!{entityName}ByQuery")
+@ApiOperation(value = "delete$!{entityName}ByQuery")
+public PmmsResponse<Long> delete$!{entityName}ByQuery(
+@RequestBody @Validated Delete$!{entityName}Request request) {
+        return tryFunction(request, () -> $!{serviceNameField}.delete$!{entityName}ByQuery(request));
+        }
 
-    @PostMapping("/delete$!{entityName}ByQuery")
-    @ApiOperation(value = "delete$!{entityName}ByQuery")
-    public PmmsResponse<Long> delete$!{entityName}ByQuery(
-            @RequestBody @Validated Delete$!{entityName}Request request) {
-        return tryFunction(request, () -> $!{serviceName}.delete$!{entityName}ByQuery(request));
-    }
-
-    @PostMapping("/update$!{entityName}ByQuery")
-    @ApiOperation(value = "update$!{entityName}ByQuery")
-    public PmmsResponse<Long> update$!{entityName}ByQuery(
-            @RequestBody @Validated Update$!{entityName}Request request) {
-        return tryFunction(request, () -> $!{serviceName}.update$!{entityName}ByQuery(request));
-    }
-}
+@PostMapping("/update$!{entityName}ByQuery")
+@ApiOperation(value = "update$!{entityName}ByQuery")
+public PmmsResponse<Long> update$!{entityName}ByQuery(
+@RequestBody @Validated Update$!{entityName}Request request) {
+        return tryFunction(request, () -> $!{serviceNameField}.update$!{entityName}ByQuery(request));
+        }
+        }

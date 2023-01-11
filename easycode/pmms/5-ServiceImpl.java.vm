@@ -33,37 +33,23 @@ import $!{basePackage}.model.request.FetchDataRequest;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.jpa.impl.JPAUpdateClause;
 import org.springframework.util.ReflectionUtils;
-import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
-
-
 import java.lang.reflect.Field;
-
 import com.onestep.os.model.exception.ValidationException;
-
 import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import com.onestep.pmms.utils.ExceptionGenerator;
-
 import javax.persistence.EntityManager;
-
 import com.querydsl.core.types.OrderSpecifier;
-
 import com.onestep.pmms.utils.UUIDUtils;
 import com.onestep.os.utils.JsonUtils;
 import org.springframework.util.StringUtils;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.onestep.pmms.model.BaseEntity;
-
 import org.springframework.util.ObjectUtils;
-
 import java.util.stream.Collectors;
-
 import com.querydsl.jpa.impl.JPAQuery;
-
 import java.util.ArrayList;
-
 import javax.persistence.PersistenceContext;
 import javax.annotation.Resource;
 import java.util.List;

@@ -275,7 +275,9 @@ object FileUtil {
         return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
             .listFiles()
             ?.filter { it.isDirectory }
-            ?.map { it.name } ?: emptyList()
+            ?.map { it.name }
+            ?.sortedBy { it }
+            ?: emptyList()
     }
 
     fun listDirectory(): List<File> {
@@ -287,7 +289,9 @@ object FileUtil {
             ?.apply {
                 Env.println("listDirectory result : ${this.joinToString { it.toString() }}")
             }
-            ?.filter { it.isDirectory } ?: emptyList()
+            ?.filter { it.isDirectory }
+            ?.sortedBy { it }
+            ?: emptyList()
     }
 }
 
@@ -424,8 +428,7 @@ fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
     val listPanel = FileUtil.listDirectory()
         .map {
             val templatePanel = ListCheckboxPanel(
-                it.name,
-                it.listFiles()?.toList() ?: emptyList()
+                it.name, it.listFiles()?.sortedBy { file -> file.name }?.toList() ?: emptyList()
             )
             mainPanel.add(templatePanel)
             templatePanel

@@ -1,0 +1,27 @@
+$!setting.setFileName("TotalResponse.java")
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}response;
+
+import java.util.List;
+
+import com.google.common.collect.Lists;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class TotalResponse<T> {
+    private List<T> dataList;
+    private Long total;
+
+    public static <T> TotalResponse<T> emptyResult() {
+        return TotalResponse.<T>builder()
+                .dataList(Collections.emptyList())
+                .total(0L)
+                .build();
+    }
+}

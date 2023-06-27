@@ -1,0 +1,65 @@
+$!setting.setFileName("FetchDataRequest.java")
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}request;
+
+import com.onestep.pmms.financeeapproval.model.enums.OrderBy;
+import com.onestep.pmms.financeeapproval.model.response.TotalResponse;
+import com.onestep.pmms.model.message.BasePmmsDataRequest;
+import com.querydsl.core.QueryResults;
+import com.querydsl.jpa.impl.JPAQuery;
+import lombok.Data;
+
+import javax.validation.constraints.AssertTrue;
+import java.util.Collections;
+import java.util.List;
+
+@Data
+public class FetchDataRequest extends BasePmmsDataRequest {
+
+    private OrderBy orderByUpdateAt;
+
+    private OrderBy orderByCreateAt;
+    /**
+     * 允许为空，表示获取所有数据
+     */
+    private Long page;
+    /**
+     * 允许为空，表示获取所有数据；
+     * 0 表示不获取列表，只需要 total
+     */
+    private Long size;
+
+    @AssertTrue(message = "page and size must both been nul or notnull")
+    public boolean checkPageRight() {
+        return (page != null && size != null) || (page == null && size == null);
+
+    }
+
+    public static <T> TotalResponse<T> handlePageResult(FetchDataRequest request, JPAQuery<T> jpaQuery) {
+
+        if (request.getPage() == null) {
+            final List<T> dataList = jpaQuery.fetch();
+            return TotalResponse.<T>builder()
+                    .dataList(dataList)
+                    .total((long) dataList.size())
+                    .build();
+        }
+        if (request.getSize() == 0) {
+            long fetchCount = jpaQuery.fetchCount();
+            return TotalResponse.<T>builder()
+                    .dataList(Collections.emptyList())
+                    .total(fetchCount)
+                    .build();
+        }
+
+        final QueryResults<T> fetchResults = jpaQuery
+                .offset(request.getPage() * request.getSize())
+                .limit(request.getSize())
+                .fetchResults();
+        return TotalResponse.<T>builder()
+                .dataList(fetchResults.getResults())
+                .total(fetchResults.getTotal())
+                .build();
+
+    }
+}

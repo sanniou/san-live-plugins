@@ -27,3 +27,8 @@ Custom plugin for [LivePlugins](https://github.com/dkandalov/live-plugin)
 
 #### 4 打开自动运行
 ![](./doc/Screenshot_07.png)
+
+live-plugins 是 git 仓库，不是一个标准的插件，所以这个里运行会失败，不需要的时候可以从 Parent Directory 删掉
+
+## NOTE
+升级 IDEA 大版本的时候。 Parent Directory 会发生变化，所以可以手动从旧的目录复制过去

@@ -22,7 +22,7 @@ Custom plugin for [LivePlugins](https://github.com/dkandalov/live-plugin)
 ![](./doc/Screenshot_05.png)  
 这里窗口会提示 LivePlugins 的插件路径，clone 的 git 仓库也会在这下面。  
 所以使用本仓库的时候，需要手动把需要的插件复制到 Parent Directory 路径。  
-比如使用 EasyCode：
+比如使用 EasyCode：  
 ![](./doc/Screenshot_06.png)
 
 #### 4 打开自动运行

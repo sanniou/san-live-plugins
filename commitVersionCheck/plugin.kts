@@ -106,6 +106,9 @@ fun updateVersion(updateApi: Boolean, project: Project): CheckinHandler.ReturnRe
             "pom.xml",
             GlobalSearchScope.projectScope(project)
         )
+        if (pomFiles.size==0) {
+            return CheckinHandler.ReturnResult.COMMIT
+        }
         val pomFile = pomFiles[0]
         val xmlFile = pomFile as XmlFile
         var date = LocalDateTime.now()

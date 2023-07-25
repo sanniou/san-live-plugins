@@ -21,7 +21,7 @@ import kotlin.reflect.KClass
 
 // depends-on-plugin com.intellij.java
 
-//todo order method;order filed  
+//todo order method;order filed
 object Env {
 
     const val startup = true

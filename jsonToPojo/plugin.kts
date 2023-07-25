@@ -32,7 +32,7 @@ import javax.swing.JTextArea
 
 
 // depends-on-plugin com.intellij.java
-// add-to-classpath /home/jichang/.config/JetBrains/IntelliJIdea2022.2/live-plugins/jenkins/jenkins-client-0.3.8.jar
+// add-to-classpath /home/jichang/.config/JetBrains/IntelliJIdea2023.1/live-plugins/jsonToPojo/gson-2.10.1.jar
 object Env {
     const val startup = true
     const val resetAction = true

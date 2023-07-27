@@ -203,9 +203,10 @@ fun parseObject(
         } else {
             name
         }
-    }
+    }?.toCamelCase()
     realName?.run {
         classSet.add(realName)
+        classSet.add(name)
     }
     val dataBuilder =
         StringBuilder(realName?.run { "@Data\npublic static class $realName {" } ?: "")
@@ -259,7 +260,7 @@ fun parseObject(
                     dataBuilder.append(getJsonElementTypeName(element))
                 }
             }
-            dataBuilder.append(" $key")
+            dataBuilder.append(" ${key.toCamelCase().lowercaseFirstChar()}")
             dataBuilder.append(";\n")
         }
 
@@ -271,6 +272,24 @@ fun parseObject(
     return realName
 }
 
+fun String.formatAcronym(): String {
+    val str = this
+    val regex = """(\A[A-Z]{2,})""".toRegex()
+    return str.replace(regex) {
+        val acronym = it.value
+        acronym.first().toString() + acronym.substring(1, acronym.length - 1).lowercase()+acronym.last()
+    }
+
+}
+
+fun String.toCamelCase(): String {
+    return this.split("_|@|\\.".toRegex()).joinToString("") { it.capitalize() }.formatAcronym()
+}
+
+
+fun String.lowercaseFirstChar(): String {
+    return this.decapitalize()
+}
 
 object FileUtil {
     fun loadFile(fileName: String): File {

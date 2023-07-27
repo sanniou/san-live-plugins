@@ -132,7 +132,8 @@ fun selectFile(): PsiJavaFile? {
     val fileFilter = TreeFileChooser.PsiFileFilter { file ->
         file.name.endsWith(".java")
     }
-    val javaFileChooser = instance.createFileChooser("java文件选择器", null, JavaFileType.INSTANCE, fileFilter)
+    val javaFileChooser =
+        instance.createFileChooser("java文件选择器", null, JavaFileType.INSTANCE, fileFilter)
     javaFileChooser.showDialog()
     return (javaFileChooser.selectedFile ?: return null) as PsiJavaFile
 }
@@ -244,22 +245,28 @@ object VelocityUtils {
         return stringWriter.toString()
     }
 
-    init {
+//    init {
         // 设置初始化配置
         // 修复部分用户的velocity日志记录无权访问velocity.log文件问题
-        INIT_PROP.setProperty(
-            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-            "org.apache.velocity.runtime.log.Log4JLogChute"
-        )
-        INIT_PROP.setProperty("runtime.log.logsystem.log4j.logger", "velocity")
-    }
+//        INIT_PROP.setProperty(
+//            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+//            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+//            "org.apache.velocity.runtime.log.Log4JLogChute"
+//        )
+//        INIT_PROP.setProperty("runtime.log.logsystem.log4j.logger", "velocity")
+//    }
 
 }
 
 
 object FileUtil {
     fun loadFile(fileName: String): File {
-        return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins") + fileName)
+        return File(
+            this.javaClass.getResource("").file.replace(
+                "live-plugins-compiled",
+                "live-plugins"
+            ) + fileName
+        )
     }
 
     fun loadFile(file: File): String {
@@ -272,7 +279,12 @@ object FileUtil {
     }
 
     fun listFile(): List<String> {
-        return File(this.javaClass.getResource("").file.replace("live-plugins-compiled", "live-plugins"))
+        return File(
+            this.javaClass.getResource("").file.replace(
+                "live-plugins-compiled",
+                "live-plugins"
+            )
+        )
             .listFiles()
             ?.filter { it.isDirectory }
             ?.map { it.name }
@@ -314,7 +326,8 @@ object NameUtils {
 
     fun packageName(name: String) = name.lowercase().replace("relation", "")
 
-    fun controllerApiName(name: String) = name.decapitalize().replace("Controller", "").replace("Relation", "")
+    fun controllerApiName(name: String) =
+        name.decapitalize().replace("Controller", "").replace("Relation", "")
 
     fun match(name: String, regex: String) = regex.toRegex().matches(name)
 
@@ -383,8 +396,9 @@ fun PsiFile.reformatCode() {
 
 fun PsiFile.commitAndUnblockDocument(): Boolean {
     val virtualFile = this.virtualFile ?: return false
-    val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-        ?: return false
+    val document =
+        com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+            ?: return false
     val documentManager = PsiDocumentManager.getInstance(project)
     documentManager.doPostponedOperationsAndUnblockDocument(document)
     documentManager.commitDocument(document)
@@ -418,7 +432,12 @@ fun addOrReplaceFile(selectedFile: PsiFile, psiFile: PsiJavaFile) {
 }
 
 fun findDirectory(selectedFile: PsiFile, psiFile: PsiJavaFile): PsiDirectory {
-    return PackageUtil.findOrCreateDirectoryForPackage(selectedFile.project, psiFile.packageName, null, true)!!
+    return PackageUtil.findOrCreateDirectoryForPackage(
+        selectedFile.project,
+        psiFile.packageName,
+        null,
+        true
+    )!!
 }
 
 fun showSelected(psiClass: PsiClass, selectedFile: PsiJavaFile) {
@@ -492,7 +511,8 @@ fun isPanelSelected(vararg checkboxPanels: ListCheckboxPanel): Boolean {
     return false
 }
 
-class ListCheckboxPanel(title: String, private val items: List<File>) : JPanel(VerticalFlowLayout()) {
+class ListCheckboxPanel(title: String, private val items: List<File>) :
+    JPanel(VerticalFlowLayout()) {
 
     /**
      * 复选框列表
@@ -554,14 +574,21 @@ fun createFile(
     val param: MutableMap<String, Any> = getDefaultParam()
     param["fileClass"] = psiClass.apply {
         psiClass.allFields.forEach {
-            Env.println("createFile $it ; javaClass: ${it.javaClass} ; static : ${it.hasModifierProperty("static")} ")
+            Env.println(
+                "createFile $it ; javaClass: ${it.javaClass} ; static : ${
+                    it.hasModifierProperty(
+                        "static"
+                    )
+                } "
+            )
         }
     }
     param["packageName"] = (psiClass.containingFile as PsiJavaFile).packageName
     param["file"] = selectedFile
     param["tool"] = NameUtils
     Env.println("============suffix $suffix")
-    val templateSetting = TemplateSetting(fileName = "", fileNamePrefix = prefix, fileNameSuffix = suffix)
+    val templateSetting =
+        TemplateSetting(fileName = "", fileNamePrefix = prefix, fileNameSuffix = suffix)
     Env.println("============templateSetting $templateSetting")
     param["setting"] = templateSetting
 

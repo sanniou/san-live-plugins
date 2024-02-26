@@ -73,7 +73,7 @@ class VersionCheckHandler(private val checkinProjectPanel: CheckinProjectPanel) 
 
     override fun beforeCheckin(): ReturnResult {
         val project = checkinProjectPanel.project
-        if (!(project.name.contains("pmms"))) {
+        if (!(project.name.contains("pmms") && !(project.name.contains("work-flow")))) {
             return ReturnResult.COMMIT
         }
 
@@ -106,7 +106,7 @@ fun updateVersion(updateApi: Boolean, project: Project): CheckinHandler.ReturnRe
             "pom.xml",
             GlobalSearchScope.projectScope(project)
         )
-        if (pomFiles.size==0) {
+        if (pomFiles.size == 0) {
             return CheckinHandler.ReturnResult.COMMIT
         }
         val pomFile = pomFiles[0]

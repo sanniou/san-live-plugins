@@ -25,20 +25,17 @@ import lombok.Data;
 @Data
 public class Fetch$!{entityName}ListRequest extends FetchDataRequest implements Fetch$!{entityName}ConditionInterface {
 
-    #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-            #if(${column.docComment})
-                ${column.docComment.text}
-            #end
-            #if($tool.contains($column.name, "id")
-            ||$tool.contains($column.name, "Id")
-            ||$tool.contains($column.name, "status")
-            ||$tool.contains($column.name, "Status")
-            )
-                private Collection<$!{column.type.name}> $!{column.name};
-            #else
-                private $!{column.type.name} $!{column.name};
-            #end
+    #foreach($column in $entityFields)
+        #if(${column.docComment})
+            ${column.docComment.text}
+        #end
+        #if($tool.needBatchQuery($column.name))
+            private Collection<$!{tool.unprimitiveType($column.type.name)}> $!{column.name};
+        #else
+            private $!{tool.unprimitiveType($column.type.name)} $!{column.name};
+        #end
+        #if($tool.needLikeQuery($column.name))
+            private $!{tool.unprimitiveType($column.type.name)} $!{column.name}Key;
         #end
     #end
 }

@@ -2,8 +2,8 @@ $!setting.setFileName("FetchDataRequest.java")
 
 package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}request;
 
-import com.onestep.pmms.financeeapproval.model.enums.OrderBy;
-import com.onestep.pmms.financeeapproval.model.response.TotalResponse;
+import $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}enums.OrderBy;
+import $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}response.TotalResponse;
 import com.onestep.pmms.model.message.BasePmmsDataRequest;
 import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQuery;

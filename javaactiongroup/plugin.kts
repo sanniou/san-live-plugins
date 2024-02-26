@@ -40,14 +40,21 @@ object Env {
         }
         if (consoleView == null) {
             consoleView =
-                PluginUtil.showInConsole("${DateFormat.getDateTimeInstance().format(Date())} : $message \n", project!!)
+                PluginUtil.showInConsole(
+                    "${
+                        DateFormat.getDateTimeInstance().format(Date())
+                    } : $message \n", project!!
+                )
         } else {
             consoleView?.println(message)
         }
     }
 
     fun ConsoleView.println(str: Any?) {
-        this.print("${DateFormat.getDateTimeInstance().format(Date())} : $str \n", ConsoleViewContentType.NORMAL_OUTPUT)
+        this.print(
+            "${DateFormat.getDateTimeInstance().format(Date())} : $str \n",
+            ConsoleViewContentType.NORMAL_OUTPUT
+        )
     }
 }
 
@@ -126,7 +133,8 @@ class JavaActionGroup : ActionGroup() {
                 clazz.constructors.forEach { kFunction ->
                     Env.println(kFunction.parameters.joinToString { "a" + it.type })
                 }
-                val newAction = clazz.java.getDeclaredConstructor(Plugin::class.java).newInstance(null) as AnAction
+                val newAction = clazz.java.getDeclaredConstructor(Plugin::class.java)
+                    .newInstance(null) as AnAction
                 actionManager.registerAction(actionId, newAction)
                 return newAction
             } catch (e: Exception) {
@@ -212,7 +220,10 @@ class CopyParentProfileAction : AnAction("CopyParentProfile") {
             ?: (event.getData(LangDataKeys.PSI_FILE) as? PsiJavaFile) ?: return
         Env.println("psiElement = $psiElement")
 
-        project.currentEditor?.document?.executeCommand(project, description = "Insert Hello World") {
+        project.currentEditor?.document?.executeCommand(
+            project,
+            description = "Insert Hello World"
+        ) {
             val psiClasses = when (psiElement) {
                 is PsiJavaFile -> psiElement.classes
                 is PsiClass -> arrayOf(psiElement)
@@ -271,7 +282,6 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
             psiFile.classes.forEach { psiClass ->
                 handleClass(editor.document, offset, psiClass)
             }
-
             psiFile.reformatCode()
 
         }
@@ -291,7 +301,8 @@ class FormatBlankLineAction : AnAction("FormatBlankLine") {
                     val nextSibling = it.nextSibling
                     if (nextSibling is PsiField) {
                         Env.println("psiClass nextSibling =$nextSibling")
-                        val z = PsiParserFacade.SERVICE.getInstance(clazz.project).createWhiteSpaceFromText("\n\n")
+                        val z = PsiParserFacade.SERVICE.getInstance(clazz.project)
+                            .createWhiteSpaceFromText("\n\n")
                         it.delete()
                         clazz.addBefore(z, nextSibling)
                     }
@@ -324,12 +335,14 @@ open class AddJpaColumnAction : AnAction("AddJpaColumnAction") {
             }
 
             val jsonPropertyClass = JavaPsiFacade.getInstance(project)
-                .findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
+                .findClass(
+                    "com.fasterxml.jackson.annotation.JsonProperty",
+                    GlobalSearchScope.allScope(project)
+                )!!
             psiFile.commitAndUnblockDocument()
             if (psiFile.findImportReferenceTo(jsonPropertyClass) == null) {
                 psiFile.importClass(jsonPropertyClass)
             }
-
             psiFile.reformatCode()
 
         }
@@ -365,17 +378,42 @@ open class AddJpaColumnAction : AnAction("AddJpaColumnAction") {
             annotationValue(field).apply { offset.set(offset.get() + length) })
     }
 
+    fun PsiFile.commitAndUnblockDocument(): Boolean {
+        val virtualFile = this.virtualFile ?: return false
+        val document =
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
+                .getDocument(virtualFile)
+                ?: return false
+        val documentManager = PsiDocumentManager.getInstance(project)
+        documentManager.doPostponedOperationsAndUnblockDocument(document)
+        documentManager.commitDocument(document)
+        return true
+    }
+
     fun annotationName() = "@Column"
 
 
     fun annotationValue(field: PsiField) =
-        "${annotationName()}(name=\"${CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field.name)}\")\n"
+        "${annotationName()}(name=\"${
+            CaseFormat.UPPER_CAMEL.to(
+                CaseFormat.LOWER_UNDERSCORE,
+                field.name
+            )
+        }\")\n"
 }
 
 
 class AddJsonPropertyAction : AnAction("AddJsonProperty") {
 
 
+    fun a(a:PsiElement){
+        try {
+            CodeStyleManager.getInstance(a.project).reformat(a)
+            JavaCodeStyleManager.getInstance(a.project).optimizeImports(a.containingFile)
+        } catch (e: Exception) {
+            show(e.toString())
+        }
+    }
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project!!
         val editor = project.currentEditor!!
@@ -384,24 +422,27 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
             return
         }
 
-        editor.document.executeCommand(project, description = "Insert Hello World") {
-
-            val offset = Wrapper(0)
-            psiFile.classes.forEach { psiClass ->
-                handleClass(editor.document, offset, psiClass)
+        try {
+            editor.document.executeCommand(project, description = "AddJsonProperty") {
+                val offset = Wrapper(0)
+                psiFile.classes.forEach { psiClass ->
+                    handleClass(editor.document, offset, psiClass)
+                }
+                val jsonPropertyClass = JavaPsiFacade.getInstance(project)
+                    .findClass(
+                        "com.fasterxml.jackson.annotation.JsonProperty",
+                        GlobalSearchScope.allScope(project)
+                    )!!
+                psiFile.commitAndUnblockDocument()
+                if (psiFile.findImportReferenceTo(jsonPropertyClass) == null) {
+                    psiFile.importClass(jsonPropertyClass)
+                }
+                a(psiFile)
+                psiFile.reformatCode()
             }
-
-            val jsonPropertyClass = JavaPsiFacade.getInstance(project)
-                .findClass("com.fasterxml.jackson.annotation.JsonProperty", GlobalSearchScope.allScope(project))!!
-            psiFile.commitAndUnblockDocument()
-            if (psiFile.findImportReferenceTo(jsonPropertyClass) == null) {
-                psiFile.importClass(jsonPropertyClass)
-            }
-
-            psiFile.reformatCode()
-
+        } catch (e: Exception) {
+            Env.println(e.message ?: "")
         }
-
     }
 
     fun handleClass(document: Document, offset: Wrapper<Int>, clazz: PsiClass) {
@@ -427,10 +468,47 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
                 return
             }
         }
-        Env.println("field$field off ${field.textOffset} da${field.startOffset}")
+        Env.println("field$field textOffset=${field.textOffset} startOffset = ${field.startOffset} name=${field.name}")
         document.insertString(
             field.startOffset + offset.get(),
             annotationValue(field).apply { offset.set(offset.get() + length) })
+
+        document.replaceString(
+            field.textOffset + offset.get(),
+            field.textOffset + offset.get() + field.name.length,
+            field.name.toCamelCase().lowercaseFirstChar()
+                .apply { offset.set(offset.get() + length - field.name.length) }
+        )
+    }
+
+    fun PsiFile.commitAndUnblockDocument(): Boolean {
+        val virtualFile = this.virtualFile ?: return false
+        val document =
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
+                .getDocument(virtualFile)
+                ?: return false
+        val documentManager = PsiDocumentManager.getInstance(project)
+        documentManager.doPostponedOperationsAndUnblockDocument(document)
+        documentManager.commitDocument(document)
+        return true
+    }
+
+    fun String.toCamelCase(): String {
+        return this.split("_|@|\\.".toRegex()).joinToString("") { it.capitalize() }.formatAcronym()
+    }
+
+    fun String.formatAcronym(): String {
+        val str = this
+        val regex = """(\A[A-Z]{2,})""".toRegex()
+        return str.replace(regex) {
+            val acronym = it.value
+            acronym.first().toString() + acronym.substring(1, acronym.length - 1)
+                .lowercase() + acronym.last()
+        }
+    }
+
+    fun String.lowercaseFirstChar(): String {
+        return this.decapitalize()
     }
 
     open fun annotationName() = "@JsonProperty"
@@ -439,24 +517,7 @@ class AddJsonPropertyAction : AnAction("AddJsonProperty") {
 
 }
 
-fun PsiFile.commitAndUnblockDocument(): Boolean {
-    val virtualFile = this.virtualFile ?: return false
-    val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
-        ?: return false
-    val documentManager = PsiDocumentManager.getInstance(project)
-    documentManager.doPostponedOperationsAndUnblockDocument(document)
-    documentManager.commitDocument(document)
-    return true
-}
 
-fun PsiElement.reformatCode() {
-    try {
-        CodeStyleManager.getInstance(project).reformat(this)
-        JavaCodeStyleManager.getInstance(project).optimizeImports(this.containingFile)
-    } catch (e: Exception) {
-        show(e.toString())
-    }
-}
 
 class Wrapper<T>(var obj: T) {
 
@@ -466,4 +527,14 @@ class Wrapper<T>(var obj: T) {
         obj = t
     }
 
+}
+
+//fixme Cannot invoke "Plugin.reformatCode(com.intellij.psi.PsiElement)" because "this.this$0.this$0" is null
+fun PsiElement.reformatCode() {
+    try {
+        CodeStyleManager.getInstance(project).reformat(this)
+        JavaCodeStyleManager.getInstance(project).optimizeImports(this.containingFile)
+    } catch (e: Exception) {
+        show(e.toString())
+    }
 }

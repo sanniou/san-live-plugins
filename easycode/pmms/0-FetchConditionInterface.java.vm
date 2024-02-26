@@ -19,20 +19,17 @@ import lombok.Data;
 
 public interface Fetch$!{fileClass.name}ConditionInterface {
 
-    #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-            #if(${column.docComment})
-                ${column.docComment.text}
-            #end
-            #if($tool.contains($column.name, "id")
-            ||$tool.contains($column.name, "Id")
-            ||$tool.contains($column.name, "status")
-            ||$tool.contains($column.name, "Status")
-            )
-                Collection<$!{column.type.name}> get$tool.capitalize($column.name)();
-            #else
-                $!{column.type.name} get$tool.capitalize($column.name)();
-            #end
+    #foreach($column in $entityFields)
+        #if(${column.docComment})
+            ${column.docComment.text}
+        #end
+        #if($tool.needBatchQuery($column.name))
+            Collection<$!{tool.unprimitiveType($column.type.name)}> get$tool.capitalize($column.name)();
+        #else
+            $!{tool.unprimitiveType($column.type.name)} get$tool.capitalize($column.name)();
+        #end
+        #if($tool.needLikeQuery($column.name))
+            $!{tool.unprimitiveType($column.type.name)} get$tool.capitalize($column.name)Key();
         #end
     #end
 }

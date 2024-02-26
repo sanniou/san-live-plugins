@@ -4,15 +4,6 @@
 #set($entityName = $!{fileClass.name})
 $!setting.setFileName($tool.append($className, ".java"))
 
-
-##拿到主键
-#foreach($column in $fileClass.allFields)
-    #if(!$column.name.equals("id"))
-        #set($pk = $column)
-    #end
-#end
-
-
 #set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
 package ${basePackage}.controller;
 
@@ -24,6 +15,7 @@ import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
 import $!{basePackage}.model.response.SaveResponse;
 import $!{basePackage}.model.response.SaveAllResponse;
 import $!{basePackage}.model.response.TotalResponse;
+import $!{basePackage}.service.$!{serviceName};
 import com.onestep.pmms.controller.PMMSController;
 import com.onestep.pmms.model.message.BasePmmsDataRequest;
 import com.onestep.pmms.model.message.PmmsResponse;

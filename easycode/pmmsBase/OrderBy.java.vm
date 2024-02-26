@@ -1,0 +1,8 @@
+$!setting.setFileName("OrderBy.java")
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}enums;
+
+public enum OrderBy {
+    ASC,
+    DESC
+}

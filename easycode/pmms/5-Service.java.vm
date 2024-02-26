@@ -4,14 +4,6 @@
 
 $!setting.setFileName($tool.append($className, ".java"))
 
-##拿到主键
-#foreach($column in $fileClass.allFields)
-    #if(!$column.name.equals("id"))
-        #set($pk = $column)
-    #end
-#end
-
-
 #set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
 package ${basePackage}.service;
 

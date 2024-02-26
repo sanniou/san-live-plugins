@@ -25,13 +25,10 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.layout.selected
-import com.jetbrains.rd.util.string.printToString
 import liveplugin.PluginUtil
 import liveplugin.show
 import org.apache.velocity.VelocityContext
 import org.apache.velocity.app.VelocityEngine
-import org.apache.velocity.runtime.RuntimeConstants
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
@@ -40,14 +37,12 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.DateFormat
 import java.util.*
-import java.util.function.Consumer
 import java.util.regex.Pattern
 import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTextField
-import javax.swing.JTextPane
 
 
 // depends-on-plugin com.intellij.java
@@ -246,8 +241,8 @@ object VelocityUtils {
     }
 
 //    init {
-        // 设置初始化配置
-        // 修复部分用户的velocity日志记录无权访问velocity.log文件问题
+    // 设置初始化配置
+    // 修复部分用户的velocity日志记录无权访问velocity.log文件问题
 //        INIT_PROP.setProperty(
 //            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
 //            RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
@@ -322,6 +317,16 @@ object NameUtils {
 
     fun uppercase(name: String) = name.uppercase()
 
+    fun needBatchQuery(name: String) =
+        name.contains("id", true)
+                || name.contains("code", true)
+                || name.contains("name", true)
+                || name.contains("status", true)
+
+    fun needLikeQuery(name: String) =
+        name.contains("code", true)
+                || name.contains("name", true)
+
     fun lowercase(name: String) = name.lowercase()
 
     fun packageName(name: String) = name.lowercase().replace("relation", "")
@@ -367,6 +372,16 @@ object NameUtils {
         matcher.appendTail(buffer)
         return buffer.toString()
     }
+
+    fun unprimitiveType(name: String): String =
+        when (name) {
+            "int" -> "Integer"
+            "long" -> "Long"
+            "float" -> "Float"
+            "double" -> "Double"
+            "boolean" -> "Boolean"
+            else -> name
+        }
 
     fun append(vararg objects: Any): String {
         Env.println("============= apped")
@@ -586,6 +601,14 @@ fun createFile(
     param["packageName"] = (psiClass.containingFile as PsiJavaFile).packageName
     param["file"] = selectedFile
     param["tool"] = NameUtils
+    param["entityFields"] = psiClass.allFields.filter {
+        (it.hasAnnotation("javax.persistence.Transient")
+                || it.name.matches("^(update|delete|create).*(At|By)\$".toRegex())
+                || it.hasModifierProperty("static"))
+            .not()
+    }
+    param["uniqueFields"] = getUniqueFields(psiClass)
+
     Env.println("============suffix $suffix")
     val templateSetting =
         TemplateSetting(fileName = "", fileNamePrefix = prefix, fileNameSuffix = suffix)
@@ -612,3 +635,22 @@ data class TemplateSetting(
     var fileNamePrefix: String = "",
     var fileNameSuffix: String = "",
 )
+
+fun getUniqueFields(psiClass: PsiClass): List<String> {
+    val commentText = psiClass.docComment ?: return emptyList()
+    Env.println("============getUniqueFields ${commentText.text}")
+    // 正则提取
+    val pattern = Regex("unique:(.+)")
+    val match = pattern.find(commentText.text)?.groupValues?.get(1)
+
+    Env.println("============getUniqueFields ${match?.length}")
+
+    Env.println("============getUniqueFields ${match}")
+    // 拆分数组
+    if (match != null) {
+        val parts = match.split(",")
+        Env.println("============getUniqueFields ${parts}")
+        return parts.toList()
+    }
+    return emptyList()
+}

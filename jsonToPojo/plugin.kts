@@ -32,7 +32,7 @@ import javax.swing.JTextArea
 
 
 // depends-on-plugin com.intellij.java
-// add-to-classpath /home/jichang/.config/JetBrains/IntelliJIdea2023.1/live-plugins/jsonToPojo/gson-2.10.1.jar
+// add-to-classpath /home/jichang/.config/JetBrains/IntelliJIdea2023.2/live-plugins/jsonToPojo/gson-2.10.1.jar
 object Env {
     const val startup = true
     const val resetAction = true
@@ -100,7 +100,7 @@ class EasyCodeAction : AnAction(Action) {
             Env.println("EDITOR : " + event.getData(LangDataKeys.EDITOR))
 
             if (psiFile is PsiJavaFile) {
-                JsonInputDialog { jsonData ->
+                JsonInputDialog(psiFile.name) { jsonData ->
                     val editor = event.getData(PlatformDataKeys.EDITOR)
                     val project = editor?.project
                     println(project?.name)
@@ -122,7 +122,7 @@ class EasyCodeAction : AnAction(Action) {
     }
 }
 
-fun JsonInputDialog(onClickListener: (String) -> Unit) {
+fun JsonInputDialog(title: String, onClickListener: (String) -> Unit) {
     val mainPanel = JPanel(FlowLayout())
 
     val textArea = JTextArea()
@@ -141,7 +141,7 @@ fun JsonInputDialog(onClickListener: (String) -> Unit) {
     mainPanel.add(scrollPane, BorderLayout.CENTER)
 
     val dialogBuilder = DialogBuilder(project)
-    dialogBuilder.setTitle("MsgValue.TITLE_INFO")
+    dialogBuilder.setTitle(title)
     dialogBuilder.setCenterPanel(mainPanel)
     dialogBuilder.addActionDescriptor(DialogBuilder.ActionDescriptor { dialogWrapper ->
         object : AbstractAction("OK") {
@@ -179,7 +179,7 @@ fun parseObject(psiFile: PsiJavaFile, json: String): String {
         builder.append("@Data\npublic class $publicClassName {")
 
         classSet.add(publicClassName)
-        parseObject(null, null, jsonObject, builder, classSet)
+        parseObject(null, publicClassName.replace("Response", ""), jsonObject, builder, classSet)
         builder.append("}")
         return builder.toString()
     } catch (e: Exception) {
@@ -190,26 +190,20 @@ fun parseObject(psiFile: PsiJavaFile, json: String): String {
 
 fun parseObject(
     name: String?,
-    parentName: String?,
+    parentName: String,
     jsonObject: JsonObject?,
     stringBuilder: StringBuilder,
     classSet: MutableSet<String>
 ): String? {
+    Env.println("name $name,parentName $parentName")
     val realName = name?.run {
-        if (classSet.contains(name)) {
-            parentName?.run {
-                parentName + name.capitalize()
-            } ?: (name + "X")
-        } else {
-            name
-        }
+        parentName + name.capitalize()
     }?.toCamelCase()
     realName?.run {
         classSet.add(realName)
         classSet.add(name)
     }
-    val dataBuilder =
-        StringBuilder(realName?.run { "@Data\npublic static class $realName {" } ?: "")
+    val dataBuilder = StringBuilder(name?.run { "@Data\npublic static class $realName {" } ?: "")
     val docBuilder = StringBuilder("/**\n")
     jsonObject?.entrySet()
         ?.forEach { entry ->
@@ -223,7 +217,7 @@ fun parseObject(
                     docBuilder.append("* $key : {}\n")
                     val realReplacement = parseObject(
                         replacement,
-                        realName,
+                        realName ?: parentName,
                         element.asJsonObject,
                         stringBuilder,
                         classSet
@@ -242,7 +236,7 @@ fun parseObject(
                         jsonArray.get(0).isJsonObject -> {
                             val realReplacement = parseObject(
                                 replacement,
-                                realName,
+                                realName ?: parentName,
                                 jsonArray.get(0).asJsonObject,
                                 stringBuilder,
                                 classSet
@@ -277,7 +271,8 @@ fun String.formatAcronym(): String {
     val regex = """(\A[A-Z]{2,})""".toRegex()
     return str.replace(regex) {
         val acronym = it.value
-        acronym.first().toString() + acronym.substring(1, acronym.length - 1).lowercase()+acronym.last()
+        acronym.first().toString() + acronym.substring(1, acronym.length - 1)
+            .lowercase() + acronym.last()
     }
 
 }

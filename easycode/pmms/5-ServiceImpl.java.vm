@@ -1,19 +1,13 @@
 ##ServiceImpl
 ##定义初始变量
-#set($className = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "ServiceImpl"))
-#set($serviceName = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix, "Service"))
+#set($className = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix,
+    "ServiceImpl"))
+#set($serviceName = $tool.append($setting.fileNamePrefix, $fileClass.name, $setting.fileNameSuffix,
+    "Service"))
 #set($entityName = $!{fileClass.name})
 
 ##设置回调
 $!setting.setFileName($tool.append($className, ".java"))
-
-##拿到主键
-#foreach($column in $fileClass.allFields)
-    #if(!$column.name.equals("id"))
-        #set($pk = $column)
-    #end
-#end
-
 
 #set($basePackage = $!{file.packageName.substring(0,${file.packageName.indexOf(".model")})})
 #set($dataName = $!{tool.decapitalize($!{entityName})})
@@ -23,7 +17,7 @@ package ${basePackage}.service.impl;
 import $!{basePackage}.model.entity.Q$!{entityName};
 import $!{basePackage}.model.entity.$!{entityName};
 import $!{basePackage}.dao.$!{entityName}Dao;
-import $!{basePackage}.service.$!{entityName}Service;
+import $!{basePackage}.service.$!{serviceName};
 import org.springframework.stereotype.Service;
 import $!{basePackage}.model.response.SaveAllResponse;
 import $!{basePackage}.model.response.TotalResponse;
@@ -33,22 +27,30 @@ import $!{basePackage}.model.request.FetchDataRequest;
 import com.querydsl.core.types.dsl.SimpleExpression;
 import com.querydsl.jpa.impl.JPAUpdateClause;
 import org.springframework.util.ReflectionUtils;
+
 import java.lang.reflect.Field;
+
 import com.onestep.os.model.exception.ValidationException;
 import $!{basePackage}.model.request.$tool.packageName($fileClass.name).*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import com.onestep.pmms.utils.ExceptionGenerator;
+
 import javax.persistence.EntityManager;
+
 import com.querydsl.core.types.OrderSpecifier;
 import com.onestep.pmms.utils.UUIDUtils;
 import com.onestep.os.utils.JsonUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.data.domain.Example;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.onestep.pmms.model.BaseEntity;
 import org.springframework.util.ObjectUtils;
+
 import java.util.stream.Collectors;
+
 import com.querydsl.jpa.impl.JPAQuery;
+
 import java.util.ArrayList;
 import javax.persistence.PersistenceContext;
 import javax.annotation.Resource;
@@ -74,27 +76,38 @@ final $!{entityName} $!{dataName};
             $!{dataName} = $!{dataName}Dao.findById(itemDto.getId())
                 .orElseThrow(()->ExceptionGenerator.sourceNotFound($!{entityName}.class,"id",JsonUtils.writeJson(itemDto)));
         }else{
+#if($uniqueFields.size()>0)
+final $!{entityName} example = new $!{entityName}();
+    #foreach($column in $uniqueFields)
+            example.set$!tool.capitalize($column)(itemDto.get$!tool.capitalize($column)());
+    #end
+    $!{dataName} = $!{dataName}Dao.findOne(Example.of(example))
+        .orElseGet(()->{
+    $!{entityName} newEntity=new $!{entityName}();
+        newEntity.setId(UUIDUtils.getId());
+        newEntity.setCreateBy(request.getUserId());
+        return newEntity;
+        });
+#else
     $!{dataName} =new $!{entityName}();
     $!{dataName}.setId(UUIDUtils.getId());
     $!{dataName}.setCreateBy(request.getUserId());
+#end
         }
 
-    #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty(
-            "static")}&&!${column.name.equals("id")})
-                if(!request.getIgnoreNull()||itemDto.get$!tool.capitalize(${column.name})()!=null){
-            $!{dataName}.set$!tool.capitalize(${column.name})(itemDto.get$!tool.capitalize(${column.name})());
-                }
-        #end
-    #end
+#foreach($column in $entityFields)
+            if(!request.getIgnoreNull()||itemDto.get$!tool.capitalize(${column.name})()!=null){
+        $!{dataName}.set$!tool.capitalize(${column.name})(itemDto.get$!tool.capitalize(${column.name})());
+            }
+#end
 
 
 
-    $!{dataName}.setUpdateBy(request.getUserId());
+$!{dataName}.setUpdateBy(request.getUserId());
         return $!{dataName};
         })
         .collect(Collectors.toList());
-    $!{dataName}Dao.saveAll(itemList);
+$!{dataName}Dao.saveAll(itemList);
         return SaveAllResponse.builder()
         .id(itemList
         .stream()
@@ -109,14 +122,16 @@ final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=new ArrayList<>();
 
-    #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-                if(!ObjectUtils.isEmpty(request.get$!tool.capitalize(${column.name})())){
-                expressionList.add($!{dataName}.${column.name}.in(request.get$!tool.capitalize(${column.name})()));
+    #foreach($column in $entityFields)
+            if(!ObjectUtils.isEmpty(request.get$!tool.capitalize(${column.name})())){
+            expressionList.add($!{dataName}.${column.name}.in(request.get$!tool.capitalize(${column.name})()));
+            }
+        #if($tool.needLikeQuery($column.name))
+                if(!ObjectUtils.isEmpty(request.get$!tool.capitalize(${column.name})Key())){
+                expressionList.add($!{dataName}.${column.name}.like("%" + request.get$!tool.capitalize(${column.name})Key() + "%"));
                 }
         #end
     #end
-
         return expressionList;
         }
 
@@ -126,7 +141,7 @@ final Q$!{entityName} $!{dataName}=Q$!{entityName}.$!{dataName};
 
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
 
-        //===== order ===============
+    //===== order ===============
 final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
@@ -135,6 +150,15 @@ final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         break;
         case DESC:
         orderSpecifiers.add($!{dataName}.updateAt.desc());
+        }
+        }
+        if(!ObjectUtils.isEmpty(request.getOrderByCreateAt())){
+        switch(request.getOrderByCreateAt()){
+        case ASC:
+        orderSpecifiers.add($!{dataName}.createAt.asc());
+        break;
+        case DESC:
+        orderSpecifiers.add($!{dataName}.createAt.desc());
         }
         }
 
@@ -164,7 +188,7 @@ final SimpleExpression<?> fieldExpression=(SimpleExpression)ReflectionUtils.getF
 final List<BooleanExpression> expressionList=build$!{entityName}Query(request);
         expressionList.add(fieldExpression.isNotNull());
 
-        //===== order ===============
+    //===== order ===============
 final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         if(!ObjectUtils.isEmpty(request.getOrderByUpdateAt())){
         switch(request.getOrderByUpdateAt()){
@@ -173,6 +197,15 @@ final List<OrderSpecifier> orderSpecifiers=new ArrayList<>();
         break;
         case DESC:
         orderSpecifiers.add($!{dataName}.updateAt.desc());
+        }
+        }
+        if(!ObjectUtils.isEmpty(request.getOrderByCreateAt())){
+        switch(request.getOrderByCreateAt()){
+        case ASC:
+        orderSpecifiers.add($!{dataName}.createAt.asc());
+        break;
+        case DESC:
+        orderSpecifiers.add($!{dataName}.createAt.desc());
         }
         }
 
@@ -226,12 +259,10 @@ final List<BooleanExpression> expressionList=build$!{entityName}Query(request.ge
         }
 
         JPAUpdateClause updateQuery=new JPAUpdateClause(entityManager, $!{dataName});
-    #foreach($column in $fileClass.allFields)
-        #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-                if(request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})()!=null){
-                updateQuery=updateQuery.set($!{dataName}.${column.name},request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})());
-                }
-        #end
+    #foreach($column in $entityFields)
+            if(request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})()!=null){
+            updateQuery=updateQuery.set($!{dataName}.${column.name},request.get$!{entityName}DTO().get$!tool.capitalize(${column.name})());
+            }
     #end
         return updateQuery
         .set($!{dataName}.updateAt,System.currentTimeMillis())

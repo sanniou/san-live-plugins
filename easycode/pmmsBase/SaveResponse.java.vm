@@ -1,0 +1,23 @@
+$!setting.setFileName("SaveAllResponse.java")
+
+package $!{file.packageName.substring(0,${file.packageName.indexOf("entity")})}response;
+
+import java.util.List;
+
+import com.google.common.collect.Lists;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class SaveAllResponse {
+    private List<String> id;
+    private List<String> idList;
+
+    public List<String> getIdList() {
+        if (id != null) {
+            return id;
+        }
+        return idList;
+    }
+}

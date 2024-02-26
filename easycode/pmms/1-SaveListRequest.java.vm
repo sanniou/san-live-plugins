@@ -32,13 +32,12 @@ public class Save$!{entityName}ListRequest extends BasePmmsDataRequest {
     @Data
     public static class $!{entityName}DTO {
 
-        #foreach($column in $fileClass.allFields)
-            #if(!$tool.match($column.name, "^(update|delete|create).*$")&&!${column.hasModifierProperty("static")})
-                #if(${column.docComment})
-                    ${column.docComment.text}
-                #end
-                private $!{column.type.name} $!{column.name};
+        #foreach($column in $entityFields)
+
+            #if(${column.docComment})
+                ${column.docComment.text}
             #end
+            private $!{tool.unprimitiveType($column.type.name)} $!{column.name};
         #end
 
     }

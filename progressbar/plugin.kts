@@ -174,7 +174,7 @@ object FileUtil {
 
 object NyanIcons {
 
-    const val imageSize = 52
+    const val imageSize = 36
 
     val CAT_ICON: Icon by lazy {
         val loadFile = FileUtil.loadFile("/resources/cat.png")

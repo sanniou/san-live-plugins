@@ -88,13 +88,9 @@ class JavaActionGroup : ActionGroup() {
     private var hide = false
     private var arrayOfAnActions: Array<AnAction> = EMPTY_ARRAY
 
-    override fun hideIfNoVisibleChildren(): Boolean {
-        return hide
-    }
-
-    override fun isPopup(): Boolean {
-        return true
-    }
+//    override fun hideIfNoVisibleChildren(): Boolean {
+//        return hide
+//    }
 
     override fun getChildren(event: AnActionEvent?): Array<AnAction> {
         event ?: kotlin.run {
